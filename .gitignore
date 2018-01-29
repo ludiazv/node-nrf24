@@ -5,4 +5,4 @@ node_modules
 build
 .remote-sync.json
 .remote-sync.json.*
-.package-lock.json
+package-lock.json
