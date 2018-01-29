@@ -1,0 +1,8 @@
+debug_key
+debug_key.pub
+.DS_Store
+node_modules
+build
+.remote-sync.json
+.remote-sync.json.*
+.package-lock.json
