@@ -36,7 +36,7 @@ class nRF24 : public Nan::ObjectWrap {
        , poll_timeus(RF24_DEFAULT_POLLTIME) {
           dev.worker_=this;
         }
-     ~ReaderWorker() { dev.worker_=NULL; if(progress) delete progress; }
+     ~ReaderWorker() { device.worker_=NULL; if(progress) delete progress; }
 
      // Main loop for pooling the reading
      void Execute(const Nan::AsyncProgressWorker::ExecutionProgress& progress);
@@ -195,7 +195,7 @@ class nRF24 : public Nan::ObjectWrap {
               .Argument(0).IsFunction().Bind(_progress)
               .Argument(1).IsFunction().Bind(_callback).Error(&error))
       {
-            if(THIS->is_enabled_ && THIS->worker_=NULL) {
+            if(THIS->is_enabled_ && THIS->worker_==NULL) {
               Nan::Callback *progress = new Nan::Callback(_progress);
               Nan::Callback *callback = new Nan::Callback(_callback);
               Nan::AsyncQueueWorker(new nRF24::ReaderWorker(progress,callback,*THIS));
