@@ -2,7 +2,7 @@
 
 This module enable __nodejs__ to manage __nRF24L01(+)__ radios using javascript syntactic sugar manage seamlessly on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
-This module is based on the outstanding C++ library optimized by @tmrh20. Please consult this project documentation for **nRF24** [here](http://tmrh20.github.io/RF24/)
+This module is based on the outstanding C++ library optimized by @tmrh20. Please consult this project documentation for **nRF24** [here](http://tmrh20.github.io/RF24/).
 
 This project has a sister project enable Node-RED to use __nRF24L01(+)__ radios in a seamless way. Check out the repository [here](TODO)
 
@@ -82,7 +82,7 @@ Enable **nodejs** have basic communication over __nRF24L01(+)__ radios in  a sim
 ...
 var nrf24=require("nRF24"); // Load de module
 // Init the radio
-var rf24=nrf24.RF24(<CE gpio>,<CS gpio>);
+var rf24= new nrf24.RF24(<CE gpio>,<CS gpio>);
 rf24.begin();
 // Configure the radio
 rf24.config({
@@ -148,15 +148,15 @@ for your specific case.
 | ce    | GPIO # for CE pin |
 | cs    | SPI Chip Select pin. For SPIDEV the mapping is (a * 10 + b)  for /dev/spideva.b
 
-both parameters are mandatory.
+Both parameters are mandatory. Constructor must be called with __new__ keyword to create a new RF24 object, otherwise the call will produce an exception.
 
 *Example:*
 ```javascript
 // For RPI
-var rf24=nrf24.RF24(22,0); // Rpi SPI0 with CE in PIN 15/GPIO 22 and CS0
+var rf24=new nrf24.RF24(22,0); // Rpi SPI0 with CE in PIN 15/GPIO 22 and CS0
 
 // for SPIDEV
-var rf24=nrf24.RF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /dev/spidev<a>.<b>
+var rf24=new nrf24.RF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /dev/spidev<a>.<b>
 
 ```
 *Returns*: RF24 Object
@@ -169,15 +169,20 @@ After the creation of the object it is required to call to begin. If begin initi
 
 | Param | description |
 | ----- | ----------- |
-| print_debug (optional)    | true/false prints RF24 debug information in stdout
+| print_debug (optional)    | true/false prints RF24 debug information in stdout (it will be usefull for debuging and wiring cheking purposes). default=false
 
 *Example:*
+
 ```javascript
-var rf24=nrf24.RF24(22,0);
+var rf24=new nrf24.RF24(22,0);
 rf24.begin();
 
 ```
+
 *returns:* true/false success
+*throws:* nothing
+
+
 
 #### config(options)
 Configure the radio with some generally used configuration parameters. This function must be called after calling begin().
@@ -209,6 +214,7 @@ node-rf24 exports some constants to help to define:
 __note__: 250KBPS seed is only available in nRF24L01+ variant. If your radio is a nRF24L01 this speed option will not work.
 
 *Example:*
+
 ```javascript
 rf24.begin();
 /* set Powe Level to maximum, set transfer speed to 250KBPS and on channel 101 */
@@ -236,6 +242,7 @@ console.log("Radio connected:" + rf24.present()); // Prints true/false if radio 
 
 ```
 *Returns*: true/false (if radio is connected)
+
 *Throws*: nothing.
 
 ### isP()
@@ -316,7 +323,7 @@ else console.log("Pipe opened" + pipenr);
 
 
 ### removeReadPipe(pipenr)
-Deregister a pipe to read from. This function can be used to reconfigure close reading pipes registered with
+Deregister a pipe to read from. This function can be used to reconfigure close reading pipes registered with addReadPipe.
 
 *parameters*:
 
@@ -329,11 +336,10 @@ Deregister a pipe to read from. This function can be used to reconfigure close r
 *throws:* SyntaxError if parameters are invalid.
 
 
-
 ### read(rcv_callback,stop_callback)
 Register async callback for receiving information over the radio. This will enable the radio to receive frames from other radios. Reading pipes registered via addReadPipe will be used.
 
-__Note:__ Have in mind that read callback is unique for all pipes and is not possible to register several call-backs. If read is called multiple times only the first one will used. To register another callback ```stop_read()``` must be called and thend another call to ```read()``` will be successful.
+__Note:__ Have in mind that read callback is unique for all pipes and is not possible to register several call-backs. If read is called multiple times only the first one will used. To register another callback ```stop_read()``` must be called and then another call to ```read()``` will be successful.
 
 *parameters*:
 
@@ -341,6 +347,8 @@ __Note:__ Have in mind that read callback is unique for all pipes and is not pos
 | --------- | ----------- |
 | rcv_callback  |  function(Buffer data, int pipenr)  that will called back on reception of any valid frame from the radio. data is Buffer , pipenr is the pipe descriptor|
 | stop_callback   | function(bool stopped,bool by_user, int error_count) that will be called back when by some reason we have stopped listening.    |
+
+both parameters are mandatory.
 
 *example*:
 
@@ -369,16 +377,35 @@ function(stop,by_user,err_count) {
 *Throws:*: SyntaxError if parameters are invalid.
 
 ### stop_read()
-Stop listening for radio frames from the radio. This function is intended halt any further reading, however, as read mechanism is async it is possible that any pending read is delivered to reading callback. After successful
+Stop listening for radio frames from the radio. This function is intended halt any further reading, however, as read mechanism is async it is possible that any pending read is delivered to reading callback. After successful halt of reading operation a ``` stop_callback ``` will be called, at this point no further frames will be received in ```rcv_callback ```.
 
 This function will take about 200ms to complete blocking your JS code. Therefore it should be used mainly to shut down communication not being designed for switching purposes.
 
-This function is also called automatically upon object destructor.
+This function is also called automatically upon object destruction.
 
 __Note: To send frames is NOT needed to stop reading.__
 
 *parameters:* none.
+
+*example:*
+
+```javascript
+...
+rf24.read( ... , ... );
+
+// At this point rcv_callback is called once a frame is received.
+
+...
+// other code
+...
+
+// Stop reading
+rf24.stop_read();
+
+```
+
 *returns:* nothing.
+
 *throws:* nothing.
 
 
@@ -403,6 +430,7 @@ TODO
 
 
 # TODO
+
 - Test bindings
 - Migrate to NAN 2.8 to support queued async msg passing.
 - Get rid off try_abort hack (pending nRF24 lib merge)
@@ -410,8 +438,8 @@ TODO
 
 
 # Change log
-- v0.0.0 pre-alpha version
+- v0.0.0 alpha versions
 - v0.0.1 First version
   - Basic RF24 Working stable.
   - RF24Mesh in testing.
-  - RF24Gateway in
+  - RF24Gateway in development.
