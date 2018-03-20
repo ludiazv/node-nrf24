@@ -6,7 +6,7 @@
 
 // Main loop for pooling the reading
 
-void nRF24Mesh::MeshWorker::Execute(const Nan::AsyncProgressWorker::ExecutionProgress& progress_) {
+void nRF24Mesh::MeshWorker::Execute(const RF24AsyncWorker::ExecutionProgress& progress_) {
   stopped_=false;
   useconds_t half=poll_timeus/4;
   nRF24Mesh::MeshFrame frame;
@@ -48,7 +48,7 @@ void nRF24Mesh::MeshWorker::HandleProgressCallback(const char *data, size_t size
      Nan::CopyBuffer((char*)f->data,f->size).ToLocalChecked()
    };
 
-   progress->Call(2, argv);
+   progress->Call(2, argv,this->async_resource);
 }
 
 void nRF24Mesh::MeshWorker::HandleOKCallback() {
@@ -57,7 +57,7 @@ void nRF24Mesh::MeshWorker::HandleOKCallback() {
     Nan::New(stopped_),
     Nan::New(want_stop),
     Nan::New(error_count) };
-    callback->Call(3,argv);
+    callback->Call(3,argv,this->async_resource);
 }
 
 void nRF24Mesh::MeshWorker::stop() {
@@ -78,9 +78,8 @@ bool nRF24Mesh::_begin(uint8_t nodeID,uint8_t channel, uint8_t data_rate,uint8_t
   bool res=false;
   std::lock_guard<std::mutex> guard(mesh_mutex);
   if(reset_dhcp) std::remove("dhcplist.txt"); // Clean DHCP if required
-  on_abort(); // Do nothing on abort
+  //on_abort(); // Do nothing on abort
   try_and_catch_abort([&]() -> void {
-          set_debug_abort("begin");
           int ce,cs;
           // Disable referenced radio object
           nrf24._begin(false);
@@ -116,7 +115,6 @@ int16_t nRF24Mesh::_getNodeID(uint16_t address) {
   std::lock_guard<std::mutex> guard(rules_mutex);
   std::lock_guard<std::mutex> guard2(mesh_mutex);
   try_and_catch_abort([&]() -> void {
-          set_debug_abort("getID");
           res=mesh->getNodeID(address);
   });
   return res;
@@ -139,7 +137,6 @@ bool nRF24Mesh::_send(void* data, uint8_t msg_type, uint16_t size, uint8_t nodeI
   bool res=false;
   std::lock_guard<std::mutex> guard(mesh_mutex);
   try_and_catch_abort([&]() -> void {
-          set_debug_abort("write");
           res=mesh->write(data,msg_type,size,nodeID);
           if(!res && !_isMaster()) {
             if(!mesh->checkConnection()) mesh->renewAddress();
@@ -154,28 +151,21 @@ int nRF24Mesh::_loop(nRF24Mesh::MeshFrame &frame) {
   std::lock_guard<std::mutex> guard(mesh_mutex);
   std::lock_guard<std::mutex> guard2(rules_mutex);
   try_and_catch_abort([&]()-> void {
-                          //std::cout << "Thread" << std::this_thread::get_id() << std::endl;
-                          set_debug_abort("update");
                           mesh->update();
-                          set_debug_abort("dhcp");
                           if(_isMaster()) mesh->DHCP();
-                          set_debug_abort("available");
                           if(network->available()) {
                             RF24NetworkHeader header;  // Check the header and try to match rules
-                            set_debug_abort("peek");
                             network->peek(header);
                             NRF24DBG(std::cout << "[Loop] type:" << header.type << std::endl);
                             auto i=rules.begin();
                             for( ;i != rules.end(); ++i) {
-                                if(i->type == 0 || i->type == header.type) { //
-                                  set_debug_abort("read");
+                                if(i->type == 0 || i->type == header.type) { // type match
                                   auto lng=network->read(frame.header,frame.data,i->max_len);
                                   frame.size=lng;
                                   res=1;
                                   break;
                                 }
                             }
-                            set_debug_abort("read2");
                           if(i==rules.end()) {network->read(header,0,0); res=0; } // Ignore frame
                         } else res=0;
   });

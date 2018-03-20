@@ -4,6 +4,8 @@
 #include "rf24.hpp"
 #include "tryabort.hpp"
 
+#ifdef NRF24_DEBUG
+
 std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
    return out << "PALevel:" << (int)h.PALevel << " DataRate:" << (int)h.DataRate
               << " Channel:" << (int)h.Channel << " CRCLength:" << (int)h.CRCLength
@@ -11,10 +13,12 @@ std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
               << " PayloadSize:" << (int)h.PayloadSize << " AddressWidth:" << (int)h.AddressWidth;
 }
 
+#endif
+
 static RF24_conf_t DEFAULT_RF24_CONF={ RF24_PA_MIN , RF24_1MBPS , 76 , RF24_CRC_16 , 5, 15, 32, 5 };
 
 /* Reader */
-void nRF24::ReaderWorker::Execute(const Nan::AsyncProgressWorker::ExecutionProgress& progress_) {
+void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& progress_) {
   char frame[32+1];
   uint8_t pipe;
   useconds_t half=poll_timeus/4;
@@ -57,7 +61,7 @@ void nRF24::ReaderWorker::HandleProgressCallback(const char *data, size_t size) 
     Nan::CopyBuffer( ((char*)data)+1,size-1).ToLocalChecked(),
     Nan::New(pipe)
   };
-  progress->Call(2, argv);
+  progress->Call(2, argv,this->async_resource);
 }
 
 void nRF24::ReaderWorker::HandleOKCallback() {
@@ -66,7 +70,7 @@ void nRF24::ReaderWorker::HandleOKCallback() {
       Nan::New(stopped_),
       Nan::New(want_stop),
       Nan::New(error_count) };
-      callback->Call(3,argv);
+      callback->Call(3,argv,this->async_resource);
 }
 
 void nRF24::ReaderWorker::stop() {
@@ -141,7 +145,7 @@ bool nRF24::_write(void *data,size_t r_length){
     if(!is_enabled_) return false;
     if(worker_!=NULL) worker_->want_write(true);
     std::lock_guard<std::mutex> guard2(radio_write_mutex); // write lock
-    //std::cout << "try to w" << std::endl;
+
     if(_powerUp() && _transmit()) {
       std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
       try_and_catch_abort([&]() -> void {
@@ -149,7 +153,7 @@ bool nRF24::_write(void *data,size_t r_length){
       });
     }
     if(worker_!=NULL) worker_->want_write(false);
-    _listen(); // Back to listen
+    _listen(); // Back to listen TODO- remove this an test.
     return res;
 }
 bool nRF24::_useWritePipe(uint8_t *pipe_name){
@@ -166,7 +170,7 @@ int32_t nRF24::_addReadPipe(uint8_t *pipe_name,bool auto_ack) {
    int i=1;
    if(!is_enabled_) return -1;
    while(used_pipes_[i] && i<6) i++;
-   //std::cout << "Free pipe " << i << std::endl;
+
    if(i<6) {
       std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
       try_and_catch_abort([&]() -> void {

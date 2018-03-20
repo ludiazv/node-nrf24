@@ -2,7 +2,9 @@
 #define _NRF24_NODE_UTIL_HPP_
 #include<nan.h>
 // For debug
+#ifdef NRF24_DEBUG
 #include<iostream>
+#endif
 
 bool ObjHas(v8::Local<v8::Object> & obj,const std::string & name);
 v8::Local<v8::Value> ObjGet(v8::Local<v8::Object> & obj,const std::string & name);

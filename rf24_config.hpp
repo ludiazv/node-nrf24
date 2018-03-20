@@ -4,10 +4,10 @@
 #include <nan.h>
 #include <nan-check.h>
 #include <RF24.h>
-#include <RF24Network.h>
+/*#include <RF24Network.h>
 #include <RF24Mesh.h>
 #include <RF24Gateway.h>
-
+*/
 
 // config
 #define RF24_DEFAULT_POLLTIME  50*1000   // 50ms default poll wait for reading
@@ -18,6 +18,11 @@
 #define MRET(x)        (info.GetReturnValue().Set(x))
 #define NANCONST(x,v)  (Nan::Set(target,Nan::New(x).ToLocalChecked(),Nan::New(v).ToLocalChecked()))
 #define NANCONSTI(x,v) (Nan::Set(target,Nan::New(x).ToLocalChecked(),Nan::New(v)))
+
+// Old Nan version 2.7.0
+//typedef Nan::AsyncProgressWorker RF24AsyncWorker;
+// For Nan version > 2.8.0
+typedef Nan::AsyncProgressQueueWorker<char> RF24AsyncWorker;
 
 
 #endif

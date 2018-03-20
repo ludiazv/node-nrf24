@@ -8,7 +8,7 @@
       "cflags": [
         "-std=c++11","-fexceptions"
       ],
-      'cflags_cc': [ '-fexceptions',"-std=c++11" ],
+      'cflags_cc': [ '-fexceptions',"-std=c++11","-Ofast" ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "<!(node -e \"require('nan-check')\")",

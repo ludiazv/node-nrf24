@@ -10,7 +10,7 @@
 #else // Asume is AVR
   #include <printf.h>
   #if defined(NANO)
-    RF24 radio=RF24(9,10);
+    RF24 radio=RF24(7,8);
     #define BOARD "AVR-NANO"
   #else
     RF24 radio=RF24(7,8);
@@ -36,10 +36,9 @@ void setup() {
     Serial.print(F("MODEL:")); Serial.println(BOARD);
     Serial.println(F("This scripts send or receive to/from node-rf24 is running"));
     Serial.println(F("Reading D3 (IO0 on ESP8266) to define pipe address"));
-    if(ADDR_PIN>0) {
-      pinMode(ADDR_PIN,INPUT);
-      radioNumber=(digitalRead(ADDR_PIN)) ? 2 : 1;
-    }
+
+    pinMode(ADDR_PIN,INPUT);
+    radioNumber=(digitalRead(ADDR_PIN)) ? 2 : 1;
 
     Serial.print(F("Write to:")); Serial.println((char *)addresses[radioNumber]);
     Serial.print(F("Read in:")); Serial.println((char *)raddresses[radioNumber]);
@@ -51,14 +50,10 @@ void setup() {
     radio.setAutoAck(true);
     radio.setRetries(15, 15);
 
-    if(ADDR_PIN>0) {
-      radio.openWritingPipe(addresses[radioNumber]);
-      radio.openReadingPipe(1, raddresses[radioNumber]);
-    } else
-    {
-      radio.openWritingPipe(raddresses[radioNumber+1]);
-      radio.openReadingPipe(1, addresses[radioNumber+1]);
-    }
+
+    radio.openWritingPipe(addresses[radioNumber]);
+    radio.openReadingPipe(1, raddresses[radioNumber]);
+
 
     radio.startListening();
     radio.printDetails();

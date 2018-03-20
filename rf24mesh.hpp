@@ -22,13 +22,13 @@ class nRF24Mesh : public Nan::ObjectWrap {
    };
 
    // Worker class
-   class MeshWorker : public Nan::AsyncProgressWorker {
+   class MeshWorker : public RF24AsyncWorker {
     public:
       MeshWorker(
           Nan::Callback *_progress
         , Nan::Callback *callback
         , nRF24Mesh& _mesh)
-        : Nan::AsyncProgressWorker(callback), progress(_progress),mesh(_mesh)
+        : RF24AsyncWorker(callback), progress(_progress),mesh(_mesh)
         , want_stop(false),stopped_(true), error_count(0)
         , poll_timeus(RF24_DEFAULT_POLLTIME) {
            mesh.worker_=this;
@@ -36,7 +36,7 @@ class nRF24Mesh : public Nan::ObjectWrap {
       ~MeshWorker() { mesh.worker_=NULL; if(progress) delete progress; }
 
       // Main loop for pooling the reading
-      void Execute(const Nan::AsyncProgressWorker::ExecutionProgress& progress_);
+      void Execute(const RF24AsyncWorker::ExecutionProgress& progress_);
       void HandleProgressCallback(const char *data, size_t size);
       void HandleOKCallback();
 
@@ -161,7 +161,7 @@ static NAN_METHOD(accept_mesh) {
     if(Nan::Check(info).ArgumentsCount(2)
        .Argument(0).IsString().Bind(type)
        .Argument(1).Bind(max_len).Error(&error)) {
-        if(!ConvertHexAddress(type,typec,1) || typec[0]<0 || typec[0] >127) return Nan::ThrowSyntaxError("Type must be 0x00 to 0x7F");
+        if(!ConvertHexAddress(type,typec,1) /*|| typec[0]<0 */ || typec[0] >127) return Nan::ThrowSyntaxError("Type must be 0x00 to 0x7F");
         if(max_len > MAX_PAYLOAD_SIZE || max_len <=0) max_len=MAX_PAYLOAD_SIZE;
         NRF24DBG(std::cout << "Accepting frames for type " << typec[0] << " len:" << max_len << std::endl);
         MRET(THIS->_addrcv(typec[0],max_len));

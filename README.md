@@ -1,23 +1,39 @@
+
 # nrf24 - RF24 Radios in the node way
 
-This module enable __nodejs__ to manage __nRF24L01(+)__ radios using javascript syntactic sugar manage seamlessly on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
+[![GitHub issues](https://img.shields.io/github/issues/ludiazv/node-nrf24.svg)](https://github.com/ludiazv/node-nrf24/issues)
 
-This module is based on the outstanding C++ library optimized by @tmrh20. Please consult this project documentation for **nRF24** [here](http://tmrh20.github.io/RF24/).
+This module enable __nodejs__ (using javascript syntactic sugar) to manage __nRF24L01(+)__ radios on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
-This project has a sister project enable Node-RED to use __nRF24L01(+)__ radios in a seamless way. Check out the repository [here](TODO)
+This module is based on the outstanding C++ library optimized by @tmrh20. Please consult this project documentation **nRF24** [here](http://tmrh20.github.io/RF24/) for additional details.
+
+This project has a sister project to enable **Node-RED** to use __nRF24L01(+)__ radios in a seamless way with visual flow programming. Check out the repository [here](https://github.com/ludiazv/node-red-contrib-nrf24).
+
 
 ## Overview
 
-This node add-on has the following features:
+This nodejs add-on has the following features:
 
 1. Basic __RF24__ radio support.
 2. Create a __RF24Mesh__ network as master or Join to a *RF24Mesh* as node.
-3. Provide a __RF24Gateway__ directly on nodeJs to provide TCP/IP connectivity for your radios.
+3. Provide a __RF24Gateway__ directly on nodeJs to provide TCP/IP connectivity for your radios. *[In development]*
 
 
 ## Installation
 
 ### Prerequisites:
+
+#### SPI enabled
+In order to communicate with the radio linux kernel need to have SPI enabled. In some distributions SPI interface is disabled by default so it's needed to be enabled.
+
+In Rpi Raspbian it can be done using ``raspi-config`` or modifing `` /boot/config.txt ``. Check [here](https://www.raspberrypi.org/documentation/hardware/raspberrypi/spi/README.md) for more details.
+For Rpi DietPi (recommended distribution for headless projects) the procedure is similar.
+
+In Rpi alternatives based on armbian such OrangePi, NaoPi,... please consult armbian documentation [here](https://docs.armbian.com/Hardware_Allwinner_overlays/).
+
+For other SBCs or distributions consult who to activate SPI.
+
+If using Spidev driver (see below) the user executing the nodejs application need to have access to the /dev/spidevX.X files. This can be done in typical distribution adding the user to the ``spi`` group.
 
 #### A working nRF24L01(+) radio
 
@@ -49,6 +65,9 @@ An example of wiring for an OrangePi Zero(using SPI 1 bus) and Rpi (using SPI 0 
 
 Understand your wiring is critical for hardware initialization as there are not hardware discovery mechanism implemented in the library.
 
+__note__: IRQ pins are not used in current version but planned.
+
+
 #### RF24* libraries installed
 
 RF24* libs must be installed in the system. Please check out  [this](http://tmrh20.github.io/RF24/Linux.html) for detailed installation procedure.
@@ -60,7 +79,7 @@ You can use the installation script in this repository:
 # ./build_rf24libs.sh
 ```
 
-it should work on a typical linux environments. nRF24 c++ support different drivers. SPIDEV driver is recommended as this this the standard portable SPI.
+it should work on a typical linux environments. nRF24 c++ support different drivers. SPIDEV driver is recommended as this this the standard portable SPI. But in principle all drived provides _should_ work in a similar way. This nodejs package has been tested using Rpi driver and Spidev.
 
 ### Install the nrf24 package
 
@@ -410,7 +429,7 @@ rf24.stop_read();
 
 
 ### useWritePipe(addrs)
-
+Define the output pipe to write to. __nRF24L01__ have only one
 
 
 
@@ -431,15 +450,28 @@ TODO
 
 # TODO
 
-- Test bindings
-- Migrate to NAN 2.8 to support queued async msg passing.
+- ~~Test bindings~~
+- ~~Migrate to NAN >2.8 to support queued async msg passing.~~
+- Document Mesh
+- Document Gateway.
 - Get rid off try_abort hack (pending nRF24 lib merge)
 - Implement IRQ management.
-
+- Benchmark IRQ performance.
 
 # Change log
-- v0.0.0 alpha versions
-- v0.0.1 First version
+
+- v0.0.0-alpha4
+  - Documentation improvements.
+  - Basic RF24 additional Testing
+  - Migrated to NAN 2.10.0: Async workers now are queued so no data loss in nodejs.
+  - Cleaned RF24Mesh for after testing.
+  - Test/Example modification to arduino RF24 common pins.
+  - Added License
+
+- v0.0.0-alpha3
+  - Include bindings package to resolve package name
   - Basic RF24 Working stable.
   - RF24Mesh in testing.
   - RF24Gateway in development.
+
+- v0.0.0-alpha1 & 2 versions: Initial implementation of Basic Radio.

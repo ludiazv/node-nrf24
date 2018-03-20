@@ -20,18 +20,17 @@ typedef struct RF24_conf {
 
 std::ostream& operator<<(std::ostream& out, RF24_conf_t &h); // Prototype
 
-//typedef Nan::AsyncProgressQueueWorker<char> LFG;
 
 class nRF24 : public Nan::ObjectWrap {
  public:
    // Reader nested class
-   class ReaderWorker : public Nan::AsyncProgressWorker {
+   class ReaderWorker : public RF24AsyncWorker {
     public:
      ReaderWorker(
          Nan::Callback *progress
        , Nan::Callback *callback
        , nRF24& dev)
-       : Nan::AsyncProgressWorker(callback), progress(progress),device(dev)
+       : RF24AsyncWorker(callback), progress(progress),device(dev)
        , want_stop(false),stopped_(true), want_towrite(false), error_count(0)
        , poll_timeus(RF24_DEFAULT_POLLTIME) {
           dev.worker_=this;
@@ -39,7 +38,7 @@ class nRF24 : public Nan::ObjectWrap {
      ~ReaderWorker() { device.worker_=NULL; if(progress) delete progress; }
 
      // Main loop for pooling the reading
-     void Execute(const Nan::AsyncProgressWorker::ExecutionProgress& progress);
+     void Execute(const RF24AsyncWorker::ExecutionProgress& progress);
      void HandleProgressCallback(const char *data, size_t size);
      void HandleOKCallback();
 

@@ -32,7 +32,7 @@ void setup() {
   master=(digitalRead(MODE_PIN)) ? false : false;
 
   radio.begin();
-  radio.setPALevel(RF24_PA_HIGH);
+  radio.setPALevel(RF24_PA_MAX);
   Serial.print(F("Radio Present:")); Serial.println(radio.isChipConnected());
   Serial.print(F("is + variant:")); Serial.println(radio.isPVariant());
   uint8_t id=0;
@@ -43,8 +43,8 @@ void setup() {
   }
   mesh.setNodeID(id);
   Serial.print(F("Node addr:")); Serial.println(mesh.getNodeID());
-  mesh.begin();
-
+  mesh.begin(76);
+  Serial.println(F("RUN!"));
 
 }
 
@@ -54,7 +54,6 @@ uint32_t sendTimer =0;
 uint32_t sendTimer2 =0;
 
 void loop() {
-
     mesh.update();
     if(master){
       mesh.DHCP();
