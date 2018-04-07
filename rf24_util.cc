@@ -14,6 +14,10 @@ uint32_t ObjGetUInt(v8::Local<v8::Object> & obj,const std::string & name) {
     auto v=ObjGet(obj,name);
     return (v->IsUint32()) ? v->Uint32Value() : 0;
 }
+bool ObjGetBool(v8::Local<v8::Object> & obj,const std::string & name) {
+  auto v=ObjGet(obj,name);
+  return (v->IsBoolean()) ? v->BooleanValue() : true;
+}
 
 bool ConvertHexAddress(v8::Local<v8::String> val,uint8_t *converted,uint8_t size) {
   bool res=false;

@@ -9,6 +9,7 @@
 bool ObjHas(v8::Local<v8::Object> & obj,const std::string & name);
 v8::Local<v8::Value> ObjGet(v8::Local<v8::Object> & obj,const std::string & name);
 uint32_t ObjGetUInt(v8::Local<v8::Object> & obj,const std::string & name);
+bool ObjGetBool(v8::Local<v8::Object> & obj,const std::string & name);
 
 bool ConvertHexAddress(v8::Local<v8::String> val,uint8_t *converted,uint8_t size);
 
