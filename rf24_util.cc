@@ -42,3 +42,25 @@ bool ConvertHexAddress(v8::Local<v8::String> val,uint8_t *converted,uint8_t size
   }
   return res;
 }
+
+/* Time functions */
+/* Time functions */
+void  UsToTimeSpec(useconds_t us,struct timespec *tv){
+
+   tv->tv_sec = us/1000000;
+   tv->tv_nsec = (us*1000) % 1000000000;
+
+}
+
+void  sleep_us(useconds_t us){
+    struct timespec res;
+    UsToTimeSpec(us,&res);
+    clock_nanosleep(CLOCK_MONOTONIC_RAW, 0, &res, NULL);
+}
+
+useconds_t m_end(struct timespec *start,bool millis) {
+  struct timespec fin;
+  clock_gettime(CLOCK_MONOTONIC_RAW, &fin);
+  useconds_t us=(fin.tv_nsec - start->tv_nsec) / 1000 + (fin.tv_sec  - start->tv_sec)* 1000000;
+  return (millis) ? us/1000 : us;
+}
