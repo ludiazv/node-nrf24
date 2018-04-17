@@ -6,7 +6,7 @@
 
 // Main loop for pooling the reading
 
-void nRF24Mesh::MeshWorker::Execute(const RF24AsyncWorker::ExecutionProgress& progress_) {
+void nRF24Mesh::MeshWorker::Execute(const RF24MeshAsyncWorker::ExecutionProgress& progress_) {
   stopped_=false;
   useconds_t half=poll_timeus/4;
   nRF24Mesh::MeshFrame frame;

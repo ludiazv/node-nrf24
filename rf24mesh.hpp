@@ -22,13 +22,13 @@ class nRF24Mesh : public Nan::ObjectWrap {
    };
 
    // Worker class
-   class MeshWorker : public RF24AsyncWorker {
+   class MeshWorker : public RF24MeshAsyncWorker {
     public:
       MeshWorker(
           Nan::Callback *_progress
         , Nan::Callback *callback
         , nRF24Mesh& _mesh)
-        : RF24AsyncWorker(callback), progress(_progress),mesh(_mesh)
+        : RF24MeshAsyncWorker(callback), progress(_progress),mesh(_mesh)
         , want_stop(false),stopped_(true), error_count(0)
         , poll_timeus(RF24_DEFAULT_POLLTIME) {
            mesh.worker_=this;
@@ -36,7 +36,7 @@ class nRF24Mesh : public Nan::ObjectWrap {
       ~MeshWorker() { mesh.worker_=NULL; if(progress) delete progress; }
 
       // Main loop for pooling the reading
-      void Execute(const RF24AsyncWorker::ExecutionProgress& progress_);
+      void Execute(const RF24MeshAsyncWorker::ExecutionProgress& progress_);
       void HandleProgressCallback(const char *data, size_t size);
       void HandleOKCallback();
 
