@@ -6,3 +6,4 @@ build
 .remote-sync.json
 .remote-sync.json.*
 package-lock.json
+upload.sh
