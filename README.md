@@ -5,16 +5,23 @@
 
 This module enable __nodejs__ (using javascript syntactic sugar) to manage __nRF24L01(+)__ radios on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
-This module is based on the outstanding C++ library optimized by @tmrh20. Please consult this project documentation **nRF24** [here](http://tmrh20.github.io/RF24/) for additional details.
+This module is based on the outstanding C++ library optimized by @tmrh20. Please consult the project documentation **nRF24** [here](http://tmrh20.github.io/RF24/) for additional details.
 
-This project has a sister project to enable **Node-RED** to use __nRF24L01(+)__ radios in a seamless way with visual flow programming. Check out the repository [here](https://github.com/ludiazv/node-red-contrib-nrf24).
+This project has a sister project to enable __Node-RED__ to use __nRF24L01(+)__ radios in a seamless way with visual flow programming. Check out the repository [here](https://github.com/ludiazv/node-red-contrib-nrf24).
+
+__nRF24L01__ present several problems when connected using long wires and poorly regulated power sources. To avoid this kind of problems is recommended to use break-out boards. For standard Pi-like
+computers [this Hat/pHat](https://www.tindie.com/products/11790/) enable a simple hardware integration with minimal configuration. Full documentation of this openHw project can be consulted [here](https://github.com/ludiazv/borosRF2).
+
+**BorosRF2 hat:**
+
+![image](https://github.com/ludiazv/borosRF2/blob/master/media/all.jpg?raw=true)
 
 
 ## Overview
 
 This nodejs add-on has the following features:
 
-1. Basic __RF24__ radio support.
+1. Basic & streaming __RF24__ radio support.
 2. Create a __RF24Mesh__ network as master or Join to a *RF24Mesh* as node.
 3. Provide a __RF24Gateway__ directly on nodeJs to provide TCP/IP connectivity for your radios. *[In development]*
 
@@ -23,15 +30,19 @@ This nodejs add-on has the following features:
 
 ### Prerequisites:
 
-#### SPI enabled
-In order to communicate with the radio linux kernel need to have SPI enabled. In some distributions SPI interface is disabled by default so it's needed to be enabled.
+#### SPI enabled & Gpio Access
+In order to communicate with the radio linux kernel need to have SPI enabled and direct access to board GPIOs. In some distributions SPI interface is disabled by default so it's needed to be enabled.
 
-In Rpi Raspbian it can be done using ``raspi-config`` or modifing `` /boot/config.txt ``. Check [here](https://www.raspberrypi.org/documentation/hardware/raspberrypi/spi/README.md) for more details.
-For Rpi DietPi (recommended distribution for headless projects) the procedure is similar.
+In Rpi Raspbian it can be done using ``raspi-config`` or modifying `` /boot/config.txt ``. Check [here](https://www.raspberrypi.org/documentation/hardware/raspberrypi/spi/README.md) for more details.
+For Rpi DietPi (recommended distribution for headless projects) the procedure is similar but using the ``/DietPi/config.txt``.
+
+Gpio access require access to ``sysfs`` under the path ``/sys/class/gpio/``. In common linux distributions simply adding the user executing the nodejs application to the ``gpio`` group
+check ``usermod``to do it.
 
 In Rpi alternatives based on armbian such OrangePi, NaoPi,... please consult armbian documentation [here](https://docs.armbian.com/Hardware_Allwinner_overlays/).
 
-For other SBCs or distributions consult who to activate SPI.
+
+For other SBCs or distributions consult who to activate SPI and Gpios.
 
 If using Spidev driver (see below) the user executing the nodejs application need to have access to the /dev/spidevX.X files. This can be done in typical distribution adding the user to the ``spi`` group.
 
@@ -48,9 +59,11 @@ An example of wiring for an OrangePi Zero(using SPI 1 bus) and Rpi (using SPI 0 
 | 3	CE	         |  opi-PA6	(7)
 | 4	CSN	         |  opi-spi1cs0 (24)
 | 5	SCK	         |  opi-spi1Sck (14)
-| 6	MOSI	       |  opi-spi1Mosi (19)
-| 7	MISO	       |  opi-spi1Miso (16)
-| 8	IRQ		       |  NC              
+| 6	MOSI	       |  opi-spi1Mosi (19) |
+| 7	MISO	       |  opi-spi1Miso (16) |
+| 8	IRQ		       |  not connected / optional  |  
+
+
 
 | PIN	NRF24L01	| RPI	RPi -P1 Connector |
 | ------------- | --------------------- |
@@ -61,25 +74,28 @@ An example of wiring for an OrangePi Zero(using SPI 1 bus) and Rpi (using SPI 0 
 | 5	SCK	        | rpi-sckl	(23)
 | 6	MOSI	      | rpi-mosi	(19)
 | 7	MISO	      | rpi-miso	(21)
-| 8	IRQ		      |  NC              
+| 8	IRQ		      |  not connected  / optional            
 
 Understand your wiring is critical for hardware initialization as there are not hardware discovery mechanism implemented in the library.
 
-__note__: IRQ pins are not used in current version but planned.
-
+For better performance and lower CPU usage is recommended to connect also the __PIN 8 (IRQ line)__ an additional GPIO line. Check-out the ``config`` API addtional information about IRQ management.
 
 #### RF24* libraries installed
 
 RF24* libs must be installed in the system. Please check out  [this](http://tmrh20.github.io/RF24/Linux.html) for detailed installation procedure.
 
-You can use the installation script in this repository:
+You can use the installation script in this repository than will compile and install then
+libraries with the standard driver SPIDEV:
 
 ```
 # cd $HOME
 # ./build_rf24libs.sh
 ```
 
-it should work on a typical linux environments. nRF24 c++ support different drivers. SPIDEV driver is recommended as this this the standard portable SPI. But in principle all drived provides _should_ work in a similar way. This nodejs package has been tested using Rpi driver and Spidev.
+it should work on a typical linux environments. nRF24 c++ support different drivers. SPIDEV driver is recommended as this this the standard portable SPI. But in principle all drivers _should_ work in a similar way. This nodejs package has been tested using Rpi driver and Spidev.
+
+> __caveat__: nrf24 base library can be compiled with different drivers: Rpi, SPIDEV, WiringPi... This nodejs module is tested with SPIDEV and Rpi drivers **only**.
+
 
 ### Install the nrf24 package
 
@@ -90,7 +106,7 @@ npm install nrf24 --save
 ```
 This will add nrf24 to your project and save the dependence in your __package.json__
 
-__disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essentials" packages installed according to your linux distribution.
+__disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essential" packages installed according to your linux distribution.
 
 ## Usage
 
@@ -99,7 +115,7 @@ Enable **nodejs** have basic communication over __nRF24L01(+)__ radios in  a sim
 
 ```javascript
 ...
-var nrf24=require("nRF24"); // Load de module
+const nrf24=require("nRF24"); // Load de module
 // Init the radio
 var rf24= new nrf24.RF24(<CE gpio>,<CS gpio>);
 rf24.begin();
@@ -116,25 +132,39 @@ var pipe=rf24.addReadPipe("0x65646f4e31",true) // listen in pipe "0x65646f4e31" 
 //up to 5 pipes can be configured
 
 // Register callback for reading
-rf24.read( function(data,pipe) {
+rf24.read( function(data,n) {
   // when data arrive on any registered pipe this function is called
-  // data -> node buffer with the data
-  // pipe -> number of the pipe    
+  // data -> JS array of objects with the follwing props:
+  //     [{pipe: pipe id, data: nodejs with the data },{ ... }, ...]
+  // n -> number elements of data array    
 },function(isStopped,by_user,error_count) {
-  // This will be if the listening process is stoped.
+  // This will be if the listening process is stopped.
 });
 
 ...
 
 // Sending data over the radio
 var data=Buffer.from(<your data>); // Create a node buffer for sending data
-rf24.useWritePipe("0x72646f4e31"); // Select the pipe address to write
-rf24.write(data); // send the data
+rf24.useWritePipe("0x72646f4e31",true); // Select the pipe address to write with Autock
+rf24.write(data); // send the data in sync mode
 
 ...
+// Async write with callback
+rf24.write(data,function(success,...){
+  // Callback after sending data
+});
 
+...
 // If you want to stop listening
-rf24.stop_read();
+rf24.stopRead();
+...
+// If you want to abort pending async writes
+rf24.stopWrite();
+
+
+// Finally to assure that object is destroyed
+// and memory freed destroy must be called.
+rf24.destroy();
 
 
 ```
@@ -153,7 +183,7 @@ TODO documentation
 
 ### RF24 API
 
-The module offer a simplified and basic functionality of the nRF24 library. Only basic operations are supported. Features such DynamicPayloads, AckPayloads, buffer manipulation, ... are not supported.
+The module offer a simplified and basic functionality of the nRF24 library. Only basic operations are supported. Features such DynamicPayloads, AckPayloads, ... are not supported.
 
 #### RF24(ce,cs) constructor
 Create RF24 object that match the wiring. ce and cs values will vary depending on your
@@ -179,7 +209,25 @@ var rf24=new nrf24.RF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /d
 
 ```
 *Returns*: RF24 Object
+
 *Throws:*: TypeError Exception if the parameters CS or CE are invalid.
+
+### destroy() Explicit destructor
+Destroy the object __This method must be called__ if its needed to reclaim the memory and resources. If there is
+any pending reads on the reading queue or pending async writes will be distracted.
+
+*Example:*
+```javascript
+let rf24=new nrf24.RF24(22,0);
+...
+// Do radio work
+
+rf24.destroy(); // After this call the GC will reclaim the object if needed.
+// The object will become unusable at this point.
+```
+
+*Returns*: none.
+*Throws:*: none.
 
 #### begin(print_debug=false)
 After the creation of the object it is required to call to begin. If begin initializes the hardware for transmitting an receiving.
@@ -188,7 +236,7 @@ After the creation of the object it is required to call to begin. If begin initi
 
 | Param | description |
 | ----- | ----------- |
-| print_debug (optional)    | true/false prints RF24 debug information in stdout (it will be usefull for debuging and wiring cheking purposes). default=false
+| print_debug (optional)    | true/false prints RF24 debug information in stdout (it will be useful for debugging  purposes). default=false
 
 *Example:*
 
@@ -199,11 +247,11 @@ rf24.begin();
 ```
 
 *returns:* true/false success
+
 *throws:* nothing
 
 
-
-#### config(options)
+#### config(options,print_details=false)
 Configure the radio with some generally used configuration parameters. This function must be called after calling begin().
 
 *Parameters:*
@@ -215,12 +263,16 @@ Configure the radio with some generally used configuration parameters. This func
 | DataRate | Speed of transmission bps (2MBPS,1MBPS,250KB)            | 1MBPS |
 | Channel  | Radio Channel (1-127)  | 76 |
 | CRCLength| Length of CRC checksum for data integrity checking (8bit,16bit, disabled)  | CRC 16 bit  |
-| retriesCount  |  Number of transmission retries (5-15)   | 5 |
-| retriesDelay   | Time (us) to wait between transmission retries  | 15 |
+| retriesCount  |  Number of transmission retries (0-15)   | 5 |
+| retriesDelay   | Time (n+1)*250us to wait between transmission retries (0-15) | 15 |
 | PayloadSize  | Size of the radio frame (1-32)  | 32 |
 | AddressWidth  | Radio Pipes address size (3,4,5)  | 5  |
+| AutoAck  | Use Built-in ack true/false | true |
+| Irq | Gpio number of IRQ line (if negative IRQ line is not ussed) | -1 |
+| PollBaseTime | If IRQ is not used this the reference time in us for polling reads (>4000) | 35000 |
+| TxDelay | Grace time peridod when switching from listening to writing mode in us (>4) | 250 |
 
-All options Property are **optional**. Default values described above are used if not present in the options object.
+All options Property are **optional**. Default values described above are used if not present in the options object. If any parameter is not valid default values for the parameters are used instead.
 
 node-rf24 exports some constants to help to define:
 
@@ -231,6 +283,8 @@ node-rf24 exports some constants to help to define:
 | CRC Checking  | RF24_CRC_DISABLED,RF24_CRC_8,RF24_CRC_16  |
 
 __note__: 250KBPS seed is only available in nRF24L01+ variant. If your radio is a nRF24L01 this speed option will not work.
+
+The second parameter ``print_details`` is optional boolean to show in stdout the configuration of the radio after config is executed. This is useful for debugging.
 
 *Example:*
 
@@ -245,6 +299,7 @@ var conf={
 rf24.config(conf); // Configuration will be applied.
 
 ```
+
 *Returns:* nothing
 
 *Throws:* Syntax Error exception if errors of on parameters are found.
@@ -282,7 +337,7 @@ console.log("Is + Variant:" + rf24.isP()); // Prints true/false if radio is + Va
 ### powerUp() / powerDown()
 Disable/enable radio saving energy when not in use. By Default after ```begin()```the radio will be powered up. Note that no information can be received or transmitted but in exchange the power consumption of the radio will be less than 1uA(sleep mode).
 
-Note that if you are listening for radio frames via ```read()``` API you must call ```stop_read()``` before put the radio to sleep.
+Note that if you are listening for radio frames via ```read()``` API you must call ```stopRead()``` before put the radio to sleep. Conversely if there are pending async writes the API ``stopWrite()`` must be called before the radio can be powered down.
 
 
 *parameters*: none.
@@ -297,7 +352,8 @@ rf24.powerDown();
 rf24.read(...);
 // After registeting reading callbacks radio will remain allwayson
 ...
-rf24.stop_read();
+rf24.stopRead();
+rf24.stopWrite();
 rf24.powerDown();
 // Radio is asleep
 
@@ -306,7 +362,7 @@ rf24.powerDown();
 
 *Throws*: nothing.
 
-### addReadPipe(addr,auto_ack)
+### addReadPipe(addr,auto_ack=default value)
 Before being able to receive any frame a **reading pipe** must be registered. A reading pipe is a one-way address-based radio tunnel that need to be used by the transmitter to communicate with the receiver. In a typical radio communication the receiver will 'listen' on a predefined pipe address and the transmitter will 'send' to the same predefined address.
 
 For a two-way communication to be possible the transmitter reading pipe needs to be the same to the receiver writing pipe and vice versa. This two cross-pipe configuration enable seamless two-way transmissions.
@@ -314,7 +370,7 @@ For a two-way communication to be possible the transmitter reading pipe needs to
 nRF24 library provide 5 available reading pipes to listen numbered from 1 to 5.
 
 >__caveat__:
-> First Reading pipe registered can have any valid address (pipe 1). Pipes 2-5 are restricted to change only the last byte of the address.
+> First Reading pipe registered can have any valid address (pipe 1). Pipes 2-5 addresses __must__ have the same first bytes equal to the 1st reading pipe and can only change the last byte of the address.
 
 
 
@@ -322,10 +378,10 @@ nRF24 library provide 5 available reading pipes to listen numbered from 1 to 5.
 
 | parameter | description |
 | --------- | ----------- |
-| addr      | a **string** with the hexadecimal format "0x#######". If the radio is configured with AddressWidth=5 the string must have 12 char. if AddressWidth=4 10 chars and if AddressWidth=3 8 chars.
-| auto_ack  | true/false nRF24 support to send ACK to the transmitter by the hardware.
+| addr      | a **string** with the hexadecimal format "0x#######". If the radio is configured with AddressWidth=5 the string must have 12 char. if AddressWidth=4 10 chars and if AddressWidth=3 8 chars. |
+| auto_ack (optional) | true/false nRF24 support to send ACK to the transmitter by the hardware. |
 
-both parameters are mandatory.
+if auto_ack is not provided the default value provided in *config* will be used.
 
 *Example*:
 ```javascript
@@ -354,6 +410,35 @@ Deregister a pipe to read from. This function can be used to reconfigure close r
 
 *throws:* SyntaxError if parameters are invalid.
 
+### changeReadPipe(pipenr,auto_ack,maxmerge)
+Change the configuration of the a reading pipe. It should be called after ``addReadPipe`` **only**.
+
+*parameters*:
+
+| parameter | description |
+| --------- | ----------- |
+| pipenr    | pipe number descriptor returned by addReadPipe   |
+| auto_ack  | true/false nRF24 support to send ACK to the transmitter by the hardware. |
+| maxmerge  | Maximum number of frames to merge in a single read event on the pipe.
+
+ maxmerge is special parameter that can be used in streaming use cases. This parameter inform the reading loop that the user will accept *merging* consecutive frames on the pipe (up to the maximum number of frames specified). __Note__ that this value is maximum value and do not guaranteed that the incoming frames will be merged.
+
+*example:*
+
+```javascript
+
+var pipenr=rf24.addReadPipe("0xABCD11FF55");
+if(pipenr>0) {
+   rf24.changeReadPipe(pipenr,false,10);
+   // Disble Ack and allow the libray to merge up to 10 consecutive frames on the pipe.
+}
+
+
+```
+
+ *returns:* nothing.
+
+ *throws:* SyntaxError if parameters are not valid.
 
 ### read(rcv_callback,stop_callback)
 Register async callback for receiving information over the radio. This will enable the radio to receive frames from other radios. Reading pipes registered via addReadPipe will be used.
@@ -364,10 +449,12 @@ __Note:__ Have in mind that read callback is unique for all pipes and is not pos
 
 | parameter | description |
 | --------- | ----------- |
-| rcv_callback  |  function(Buffer data, int pipenr)  that will called back on reception of any valid frame from the radio. data is Buffer , pipenr is the pipe descriptor|
+| rcv_callback  |  function(array data, int items)  that will called back on reception of any valid frame from the radio.|
 | stop_callback   | function(bool stopped,bool by_user, int error_count) that will be called back when by some reason we have stopped listening.    |
 
 both parameters are mandatory.
+
+> __caveat__: This API has change from previous verions. Now it allow to perform only one callback for all pending packets at once. This will increase the performance of the library reducing the number of callbacks to the js userland.
 
 *example*:
 
@@ -376,14 +463,16 @@ rf24.begin();
 var pipe1=rf24.addReadPipe("0xABCD11FF55");
 var pipe2=rf24.addReadPipe("0xABCD11FF56");
 
-rf24.read( function (data,pipe) {
-  if(pipe==pipe1) {
-    // received from 0xABCD11FF55
+rf24.read( function (data,items) {
+  for(var i=0;i<items;i++) {
+    if(data[i].pipe==pipe1) {
+      // received from 0xABCD11FF55
+      // data[i].data will contain a buffer with the data
     ...
-  }else if (pipe == pipe2) {
+  }else if (data[i].pipe == pipe2) {
     // rcv from 0xABCD11FF56
+    }
   }
-
 },
 function(stop,by_user,err_count) {
   ...
@@ -395,10 +484,11 @@ function(stop,by_user,err_count) {
 
 *Throws:*: SyntaxError if parameters are invalid.
 
-### stop_read()
+
+### stopRead()
 Stop listening for radio frames from the radio. This function is intended halt any further reading, however, as read mechanism is async it is possible that any pending read is delivered to reading callback. After successful halt of reading operation a ``` stop_callback ``` will be called, at this point no further frames will be received in ```rcv_callback ```.
 
-This function will take about 200ms to complete blocking your JS code. Therefore it should be used mainly to shut down communication not being designed for switching purposes.
+This function will take more than 200ms to complete blocking your JS code. Therefore it should be used mainly to shut down communication not being designed for switching purposes.
 
 This function is also called automatically upon object destruction.
 
@@ -419,7 +509,7 @@ rf24.read( ... , ... );
 ...
 
 // Stop reading
-rf24.stop_read();
+rf24.stopRead();
 
 ```
 
@@ -428,15 +518,139 @@ rf24.stop_read();
 *throws:* nothing.
 
 
-### useWritePipe(addrs)
-Define the output pipe to write to. __nRF24L01__ have only one
+### useWritePipe(addrs,auto_ack=default_value)
+Define the output pipe to write to. __nRF24L01__ have only one output pipe with
+pipe number *0*. This call is the counter part of *addReadPipe* in the transmitter side.
+All comments about pipes explained there applies also to this pipe.
+
+*parameters*:
+
+| parameter | description |
+| --------- | ----------- |
+| addr      | a **string** with the hexadecimal format "0x#######". If the radio is configured with AddressWidth=5 the string must have 12 char. if AddressWidth=4 10 chars and if AddressWidth=3 8 chars. |
+| auto_ack (optional) | true/false nRF24 support to wait to ACK from the transmitter by the hardware. |
+
+if auto_ack is used the default value provided in *config* will be used.
+
+*Example*:
+```javascript
+rf24.begin();
+rf24.useWritePipe("0xABCD11FF55");
+...
+rf24.write(...) // This will be written to '0xABCD11FF55'
+
+```
+*Returns*: nothing
+
+*Throws*: SyntaxError if parameters are invalid.
+
+### changeWritePipe(auto_ack,stream_maxsize)
+Changes write pipe configuration. This API **must** be called after ``useWritePipe``.
+
+*parameters*:
+
+| parameter | descripton |
+| --------- | ---------- |
+| auto_ack  | true/false nRF24 support to wait to ACK from the transmitter by the hardware |
+| stream_maxsize | Maximum size in bytes of buffer in stream mode.
+
+The maximum buffer is reset to a default value of ``1204``bytes after calling to ``useWritePipe`` so to change it this function must be called every time the writting pipe is changed.  
+
+*returns*: Nothing
+
+*throws:* SyntaxError if parameters are invalid.
 
 
+### write(buffer,wr_callback *optional*)
+Send data over the radio in sync or async mode. If sync mode used ``wr_callback`` function must not be provided but the execution of JS code will block until transfer is finished. This could take up to 4ms for a 32 byte frame that could be acceptable or not depending on the use-case.
 
-### write(buffer)
+*parameters*:
+
+| parameter | description |
+| ----------| ----------- |
+| buffer    | node js buffer with the data to transmit. |
+| wr_callback| callback function for async write |
+
+if buffer size is > Payload size the call will not fail but only the bytes in the buffer that fit in one frame will be transmitted.
+
+wr_callback is a regular js callaback with the following parameters:
+- success: true/false
+- tx_ok: number of frames transmitted ok.
+- tx_bytes: number of bytes transmitted ok.
+- tx_req: number of frames requested to transmit.
+- frame_size: size of the frame in bytes
+- abort: true/false if the transmission was aborted by user.
+
+*example*:
+sync mode:
+```javascript
+if(rf24.write(Buffer.from(<data>)))
+    console.log("WR OK!");
+else
+    console.log("Failed!");
+
+```
+asyc mode:
+```javascript
+rf24.write(Buffer.from(<data>),function(success){
+  if(success) console.log("WR OK!"); else console.log("Failed!");
+});
+
+```
+
+*returns*: true/false success for sync write.
+           true/false async job successfully created.
+
+*throws*: SyntaxError if parameters are invalid.
+
+### Stream(buffer,wr_callback)
+Stream has the same semantics of write but it has its differences:
+
+- Stream can send bigger buffers. Up to the size defined in ``stream_maxsize`` parameter of the ``changeWritePipe`` API call.
+- Stream is async **only**.
+- If auto ACK is enabled if any frame in the stream failed(after predefined retries) the whole buffer will be fail. This mean that the receiver will receive frames until the first fail.
+
+*parameters:*
+
+| parameters | description |
+| ---------- | ----------- |
+| buffer     | nodejs buffer with the data. If buffer is bigger than ``stream_maxsize`` the call will not fail but only the ``stream_maxsize`` will be transmitted.
+| wr_callback | callback function for async write |
+
+wr_callback has the same specification of write function.
+
+*returns*: true/false async job successfully created.
+
+*throws*: SyntaxError if parameters are invalid.
 
 
+### stopWrite()
+Abort any pending async write. If a transmission has been aborted
 
+### getStats(*optional* pipe)
+Get internal transfer stats. *#* represents the number of frames received or transmitted.
+
+If pipe is not provided the follwing object is returned:
+```javascript
+rf24.getStats();
+// => { TotalRx: # , TotalTx_Ok: # , TotalTx_Err: # , PipesRx:[#,#,...]}
+
+```
+
+if pipe=0 the stats retuned are those of the writing pipe with the follwing format:
+```javascript
+rf24.getStats(0);
+//=>{  TotalTx_Ok: # ,TotalTx_Err: # }
+```
+if pipe >0 && <5 a number with the number of frames received is returned.
+```javascript
+rf24.getStats(pipe)
+// => #
+```
+
+### resetStats(*optional* pipe)
+Set to 0 internal transfer stats. if pipe is not selected all stats will be
+cleared.
 
 
 ## RF24Mesh API
@@ -452,13 +666,29 @@ TODO
 
 - ~~Test bindings~~
 - ~~Migrate to NAN >2.8 to support queued async msg passing.~~
+- ~~Implement setWriteAck for write pipe.~~
+- Implement MeshStats and non blocking behavior for begin,nodeID and Send.
+- Remove try_abort hack on mesh and gateway
 - Document Mesh
 - Document Gateway.
-- Get rid off try_abort hack (pending nRF24 lib merge)
-- Implement IRQ management.
-- Benchmark IRQ performance.
+- ~~Get rid off try_abort hack (pending nRF24 lib release)~~
+- Benchmark transfer speeds.
+- ~~Implement IRQ management.~~
+- ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
+- ~~Implement traffic stats~~
 
 # Change log
+
+- v0.1.0-beta
+  - Documentation improvements.
+  - Make nrf24 objects persistent with Ref(). Added destroy() method to Unref() and free object.
+  - IRQ Line support.
+  - Implement basic RF24 statistics.
+  - Polling time can be configured via ``config``
+  - Configure TxDelay via ``config``
+  - Implement async write and steam write.
+  - __This Release include breaking changes in read API__
+
 
 - v0.0.0-alpha4
   - Documentation improvements.
@@ -468,10 +698,12 @@ TODO
   - Test/Example modification to arduino RF24 common pins.
   - Added License
 
+
 - v0.0.0-alpha3
   - Include bindings package to resolve package name
   - Basic RF24 Working stable.
   - RF24Mesh in testing.
   - RF24Gateway in development.
+
 
 - v0.0.0-alpha1 & 2 versions: Initial implementation of Basic Radio.

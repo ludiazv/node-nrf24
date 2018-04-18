@@ -2,7 +2,12 @@
 const rf=require("../build/Release/nRF24");
 // Use this constructor with SPIDEV in Opi
 //var rfo=new rf.nRF24(6,10);
-var rfo=new rf.nRF24(25,0);
+
+// Std contructur Rpi
+//var rfo=new rf.nRF24(25,0);
+
+// Constructor for Boros RF2
+var rfo=new rf.nRF24(24,0);
 
 var addresses=["0x65646f4e31","0x65646f4e32","0x65646f4e33"];
 var raddresses=["0x72646f4e31","0x72646f4e32","0x72646f4e33"];

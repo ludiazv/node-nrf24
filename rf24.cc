@@ -4,270 +4,250 @@
 #include "rf24.hpp"
 #include "tryabort.hpp"
 
-#ifdef NRF24_DEBUG
 
-std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
-   return out << "PALevel:" << (int)h.PALevel << " DataRate:" << (int)h.DataRate
-              << " Channel:" << (int)h.Channel << " CRCLength:" << (int)h.CRCLength
-              << " Retries:("<< (int)h.retriesDelay << "," << (int)h.retriesCount << ")"
-              << " PayloadSize:" << (int)h.PayloadSize << " AddressWidth:" << (int)h.AddressWidth;
-}
+NAN_METHOD(nRF24::read) {
+    auto THIS=MTHIS(nRF24);
+    v8::Local<v8::Function> _progress;
+    v8::Local<v8::Function> _callback;
+    std::string error;
+    char name[128];
 
-#endif
-
-static RF24_conf_t DEFAULT_RF24_CONF={ RF24_PA_MIN , RF24_1MBPS , 76 , RF24_CRC_16 , 5, 15, 32, 5 };
-
-/* Reader */
-void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& progress_) {
-  char frame[32+1];
-  uint8_t pipe;
-  useconds_t half=poll_timeus/4;
-  stopped_=false;
-  RF24_conf_t *cc=device._get_config();
-
-  while(!want_stop) {
-    device.radio_write_mutex.lock(); // avoid writes during read polling
-    // Assure that listening
-    device._listen();
-    if(device._available(&pipe)) {
-      memset(frame,0,sizeof(frame)); // reset all zero frame
-      frame[0]=pipe;
-      if(device._read(&frame[1], cc->PayloadSize)){
-         progress_.Send(frame,(cc->PayloadSize)+1);
-          error_count=0; // Reset Error count
-      }
-      else {
-         if(++error_count>RF24_MAX_ERROR_COUNT) {
-           device.radio_write_mutex.unlock();
-           break; // Extit loop
-         }
-      }
+    if (Nan::Check(info).ArgumentsCount(2)
+            .Argument(0).IsFunction().Bind(_progress)
+            .Argument(1).IsFunction().Bind(_callback).Error(&error))
+    {
+          if(THIS->is_enabled_ && THIS->worker_==NULL) {
+            RF24_conf_t *cc=THIS->_get_config();
+            sprintf(name,"rf24:r:%d",_sequencer++);
+            Nan::Callback *progress = new Nan::Callback(_progress);
+            Nan::Callback *callback = new Nan::Callback(_callback);
+            Nan::AsyncQueueWorker(new nRF24::ReaderWorker(name,progress,callback,*THIS,cc->PollBaseTime));
+          }
     }
-    if(!want_stop && !device._available() && want_towrite) {
-        device.radio_write_mutex.unlock();
-        usleep(poll_timeus); // Give some time write
-    } else device.radio_write_mutex.unlock();
-    usleep(half);
-  }
-  want_stop=false;
-  stopped_=true;
+    else
+    {
+      return Nan::ThrowSyntaxError(error.c_str());
+    }
 }
 
-void nRF24::ReaderWorker::HandleProgressCallback(const char *data, size_t size) {
-  Nan::HandleScope scope;
-  int pipe=(int)data[0];
-  v8::Local<v8::Value> argv[] = {
-    //Nan::NewBuffer( ((char*)data)+1,size-1).ToLocalChecked(), // Buffer with the data
-    Nan::CopyBuffer( ((char*)data)+1,size-1).ToLocalChecked(),
-    Nan::New(pipe)
-  };
-  progress->Call(2, argv,this->async_resource);
+void nRF24::_cleanBuffers(const std::set<uint8_t>*pipes){
+  if(pipes!=NULL){ // Reset selected
+    for(auto it=pipes->begin();it!=pipes->end(); it++) read_buffer_[*it].clear();
+  } else {
+    for(int i=0;i<6;i++) read_buffer_[i].clear();
+  } // Reset all
+
 }
 
-void nRF24::ReaderWorker::HandleOKCallback() {
-    Nan::HandleScope scope;
-    v8::Local<v8::Value> argv[] = {
-      Nan::New(stopped_),
-      Nan::New(want_stop),
-      Nan::New(error_count) };
-      callback->Call(3,argv,this->async_resource);
+void nRF24::_copyBuffers(const std::set<uint8_t>*pipes,std::vector<uint8_t> *to){
+  for(auto it=pipes->begin();it!=pipes->end(); it++) to[*it]=read_buffer_[*it];
 }
 
-void nRF24::ReaderWorker::stop() {
-  if(!stopped_) {
-     want_stop=true;
-     usleep(poll_timeus*2);
-  }
+void nRF24::_stop_read(){
+  if(!is_enabled_ || radio_==NULL || worker_==NULL) return;
+  worker_->stop();
+  worker_=NULL;
 }
 
-/* MAIN CLASS */
-bool  nRF24::_begin(bool print_details) {
-    bool res=false;
+int nRF24::_read_buffered(std::set<uint8_t> &pending,bool &more_available){
+  if(radio_==NULL || !is_enabled_) return -1; // Return error
+  int ret=-1;
+  uint32_t n_err=0;
+
+  RF24_conf_t *cc=this->_get_config();
+  try {
     std::lock_guard<std::mutex> guard(radio_mutex);
-    if(radio_==NULL) radio_=new RF24(ce_,cs_);
-    if(radio_) {
-      try_and_catch_abort( [&] () -> void {
-                                    res=radio_->begin();
-                                    res= res && radio_->isChipConnected();
-                                    if(res && print_details) radio_->printDetails();
-     });
-    }
-    return res;
+    more_available=false;
+  //try_and_catch_abort([&]() -> void {
+      uint8_t  pipe;
+      bool no_maxlen=true;
+      uint8_t frame[32+1]; //frame[32]='\0';
+
+      while(radio_->available(&pipe) && no_maxlen && n_err< RF24_MAX_BUFFREAD_ERR) {
+         if(pipe<1 || pipe >5 ) { // Detect pipe glich
+           n_err++;
+           sleep_us(1000);
+           continue;
+         }
+         radio_->read(&frame,cc->PayloadSize); // Read the frame
+         // Buffer the frame
+         read_buffer_[pipe].insert(read_buffer_[pipe].end(),frame,frame+cc->PayloadSize);
+         no_maxlen= (read_buffer_[pipe].size() < (max_framemerge_[pipe]*cc->PayloadSize)); // Reached max merge
+         ret++;
+         pending.insert(pipe);
+         stats_[pipe].rcv++; // Colect stats
+      }
+      more_available=radio_->available(); // report if there are more pending
+      ret++; // 0 if nothing read, or number of frames
+  //});
+  }catch(const std::exception& e){
+      NRF24DBG(std::cout << "Exception _read_buffered " << e.what() << std::endl);
+  }catch(...) {
+      std::cout << "Exception _read_buffered ..." << std::endl;
+  }
+  //if(n_err>0) NRF24DBG(std::cout << "Pipe glich #:" << n_err);
+  return ret;
 }
 
-bool nRF24::_present() {
-   bool res=false;
-   if(radio_==NULL) return false;
-   std::lock_guard<std::mutex> guard(radio_mutex);
-   try_and_catch_abort([&]() -> void {
-        res=radio_->isChipConnected();
-   });
-   return res;
-}
-bool nRF24::_isP() {
-  bool res=false;
-  if(radio_==NULL) return false;
-  std::lock_guard<std::mutex> guard(radio_mutex);
-  try_and_catch_abort([&]() -> void {
-       res=radio_->isPVariant();
-  });
-  return res;
-}
 
-RF24_conf_t *nRF24::_get_config() {
-   std::lock_guard<std::mutex> guard(radio_mutex);
-   if(current_config == NULL) current_config=new RF24_conf_t(DEFAULT_RF24_CONF);
-   return current_config;
-}
 
-void nRF24::_config() {
-  if(radio_ == NULL || !is_enabled_) return;
-  RF24_conf_t *cc=this->_get_config(); // get config or init
-  std::lock_guard<std::mutex> guard(radio_mutex);
-  // Perform changes of current config
-  try_and_catch_abort([&]() -> void {
-    radio_->setAutoAck(true);
-    radio_->setPALevel(cc->PALevel);
-    radio_->setDataRate((rf24_datarate_e)cc->DataRate);
-    radio_->setChannel(cc->Channel);
-    radio_->setPayloadSize(cc->PayloadSize);
-    radio_->setRetries(cc->retriesDelay,cc->retriesCount);
-    radio_->setAddressWidth(cc->AddressWidth);
-    if(cc->CRCLength == RF24_CRC_DISABLED )
-          radio_->disableCRC();
-    else  radio_->setCRCLength((rf24_crclength_e)cc->CRCLength);
-  });
+NAN_METHOD(nRF24::write) {
+    auto THIS=MTHIS(nRF24);
+    v8::Local<v8::Object> buffer;
+    v8::Local<v8::Function> _callback;
+    std::string error;
+
+    if(info.Length()>=1 && Nan::Check(info)
+       .Argument(0).IsBuffer().Bind(buffer).Error(&error)) {
+         RF24_conf_t *cc=THIS->_get_config();
+         size_t size= node::Buffer::Length(buffer);
+         size=(size>cc->PayloadSize) ? cc->PayloadSize : size;
+         if(info.Length()>=2) {
+           if(Nan::Check(info).Argument(1)
+             .IsFunction().Bind(_callback).Error(&error)) {
+               Nan::Callback *callback = new Nan::Callback(_callback);
+               if(callback != NULL) MRET(THIS->addWriterWorker(callback,node::Buffer::Data(buffer),size));
+               else MRET(Nan::False());
+            } else Nan::ThrowSyntaxError(error.c_str());
+         }else { // SyncWrite
+           MRET(THIS->_write(node::Buffer::Data(buffer),size,1,cc->PayloadSize));
+         }
+    } else return Nan::ThrowSyntaxError(error.c_str());
 
 }
 
-bool nRF24::_write(void *data,size_t r_length){
-    bool res=false;
-    if(!is_enabled_) return false;
-    if(worker_!=NULL) worker_->want_write(true);
+NAN_METHOD(nRF24::stream){
+  auto THIS=MTHIS(nRF24);
+  v8::Local<v8::Object> buffer;
+  v8::Local<v8::Function> _callback;
+  std::string error;
+
+  if( Nan::Check(info).ArgumentsCount(2)
+     .Argument(0).IsBuffer().Bind(buffer)
+     .Argument(1).IsFunction().Bind(_callback).Error(&error)) {
+       size_t size= node::Buffer::Length(buffer);
+       size= (size > THIS->wpipe_maxstream_) ? THIS->wpipe_maxstream_ : size;
+       Nan::Callback *callback = new Nan::Callback(_callback);
+       if(callback!=NULL)
+          MRET(THIS->addWriterWorker(callback,node::Buffer::Data(buffer),size));
+       else MRET(Nan::False());
+  } else return Nan::ThrowSyntaxError(error.c_str());
+
+}
+
+
+int nRF24::_write(void *data,size_t r_length,size_t n_packets, size_t p_size){
+    int ret=0;
+    if(!is_enabled_ || radio_==NULL) return false;
+    if(worker_!=NULL) worker_->want_write();
+    try {
     std::lock_guard<std::mutex> guard2(radio_write_mutex); // write lock
 
     if(_powerUp() && _transmit()) {
       std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
-      try_and_catch_abort([&]() -> void {
-              res=radio_->write(data,r_length);
-      });
+      //try_and_catch_abort([&]() -> void {
+             if(n_packets==1) {
+              bool res=radio_->write(data,r_length); // Simple write
+              if(res) {stats_[0].snd++; ret++; } else stats_[0].sndError++;
+             }
+             else { // Streaming
+
+               size_t i=0,r=r_length % p_size;
+               struct timespec pause;
+               bool ares=true;
+               //NRF24DBG(std::cout << "Stream:" << r_length << " n_packets:" << n_packets << "remainder:" << r << std::endl);
+               m_start(&pause); // Start measuring transmission (only used for non ACK)
+               while(i<n_packets && ares) {
+                 ares= radio_->writeFast( (uint8_t*)data+(p_size*i) , p_size );
+                 i++;
+                 // if no ACK dont hold the radio tx more than 4ms (hw requirement)
+                 if(!wpipe_ackmode_ && m_end(&pause) > 3150){
+                   m_start(&pause);
+                   radio_->txStandBy(); // Wait to finish pending transfer.
+                 }
+               }
+               if(r>0 && ares) {
+                 ares=radio_->writeFast( (uint8_t*)data+(p_size*i) , r);
+                 i++;
+               }
+               bool tx= radio_->txStandBy(); // Wait for final StandBy;
+               if(ares && tx) {
+                    stats_[0].snd+=i;
+                    ret=i;
+               } else {
+                  ret= i - 1;
+                  stats_[0].snd+=ret;
+                  stats_[0].sndError+=n_packets-i+1;
+                  stats_[0].sndError+= (r>0) ? 1 : 0;
+                }
+             }
+      //});
+     }
+    }catch(const std::exception& e) {
+      NRF24DBG(std::cout << "Exeception write_ " << e.what() << std::endl);
+    } catch(...){
+      std::cout << "Exeception write_ ..."<< std::endl;
     }
-    if(worker_!=NULL) worker_->want_write(false);
-    _listen(); // Back to listen TODO- remove this an test.
-    return res;
-}
-bool nRF24::_useWritePipe(uint8_t *pipe_name){
-  if(!is_enabled_) return false;
-  bool res=false;
-  std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
-  try_and_catch_abort([&]() -> void {
-          radio_->openWritingPipe(pipe_name);
-          res=used_pipes_[0]=true;
-  });
-  return res;
-}
-int32_t nRF24::_addReadPipe(uint8_t *pipe_name,bool auto_ack) {
-   int i=1;
-   if(!is_enabled_) return -1;
-   while(used_pipes_[i] && i<6) i++;
+    if(worker_!=NULL) worker_->no_want_write();
 
-   if(i<6) {
-      std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
-      try_and_catch_abort([&]() -> void {
-              radio_->openReadingPipe((uint8_t)i,pipe_name);
-              radio_->setAutoAck((uint8_t)i,auto_ack);
-              used_pipes_[i]=true;
-      });
-      return i;
-   }else return -1;
-}
-void nRF24::_removeReadPipe(int32_t number){
-    if(number<=0 || number>6 || !is_enabled_) return;
-    std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
-    try_and_catch_abort([&]() -> void {
-            radio_->closeReadingPipe((uint8_t)number);
-            used_pipes_[number]=false;
-    });
-    bool all_closed=true;
-    for(int i=1;i<6;i++) all_closed=all_closed && !used_pipes_[i];
-    if(all_closed)  _stop_read();
+    return ret;
 }
 
+bool nRF24::addWriterWorker(Nan::Callback *cb,const char *buff,size_t size) {
+  std::lock_guard<std::mutex> guard(write_queue_mutex);
+  _sequencer++;
+  char name[128];
+  sprintf(name,"rf24:w:%d",_sequencer);
+
+  auto ww=new nRF24::WriterWorker(name, cb ,*this,buff,size);
+  if(ww!=NULL) {
+     write_queue_.push(ww);
+     Nan::AsyncQueueWorker(ww);
+     return true;
+  }
+  else return false;
+}
+
+void nRF24::removeWriterWorker() {
+  std::lock_guard<std::mutex> guard(write_queue_mutex);
+  if(!write_queue_.empty()) write_queue_.pop();
+}
+
+void nRF24::_stop_write() {
+  std::lock_guard<std::mutex> guard(write_queue_mutex);
+  while(!write_queue_.empty()){
+    auto w=write_queue_.front();
+    if(!w->started()) w->abort(); // Runing is not aborted
+    write_queue_.pop(); // Remove from queue
+  }
+
+}
+
+/* Legacy functions to remove in the future
+ * deprecated
+ */
 bool nRF24::_available(uint8_t *pipe) {
       bool res=false;
-      if(!is_enabled_) return false;
+      if(!is_enabled_ || radio_==NULL) return false;
       //if(_powerUp() && _listen()) {
           std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
-          try_and_catch_abort([&]() -> void {
+          //try_and_catch_abort([&]() -> void {
                   res= (pipe == NULL ) ? radio_->available() : radio_->available(pipe);
-          });
+          //});
       //}
       return res;
 }
 
 bool nRF24::_read(void *data,size_t r_length) {
     bool res=false;
-    if(!is_enabled_) return false;
+    if(!is_enabled_ || radio_==NULL) return false;
     if(_powerUp() && _listen()) {
       std::lock_guard<std::mutex> guard(radio_mutex);
       if(r_length==0 || r_length>radio_->getPayloadSize()) r_length=radio_->getPayloadSize();
-      try_and_catch_abort([&]() -> void {
+      //try_and_catch_abort([&]() -> void {
               radio_->read(data,r_length);
               res=true;
-      });
+      //});
     }
-    return res;
-}
-void nRF24::_stop_read(){
-  if(!is_enabled_ || worker_==NULL) return;
-  worker_->stop();
-  worker_=NULL;
-}
-
-bool nRF24::_powerUp() {
-    if(!is_enabled_) return false;
-    if(is_powered_up_) return true;
-    bool res=false;
-    std::lock_guard<std::mutex> guard(radio_mutex);
-    try_and_catch_abort([&]() -> void {
-           radio_->powerUp();
-           res=is_powered_up_=true;
-    });
-    return res;
-}
-
-bool nRF24::_powerDown() {
-    if(!is_enabled_) return false;
-    if(!is_powered_up_) return true;
-    bool res=false;
-    std::lock_guard<std::mutex> guard(radio_mutex);
-    try_and_catch_abort( [&]() -> void {
-        radio_->powerDown();
-        res=true; is_powered_up_=false;
-    });
-    return res;
-}
-
-bool nRF24::_listen() {
-    if(!is_enabled_) return false;
-    if(is_listening_) return true;
-    bool res=false;
-    std::lock_guard<std::mutex> guard(radio_mutex);
-    try_and_catch_abort( [&]() -> void {
-        radio_->startListening();
-        res=is_listening_=true;
-    });
-    return res;
-}
-
-bool nRF24::_transmit() {
-    if(!is_enabled_) return false;
-    if(!is_listening_) return true;
-    bool res=false;
-    std::lock_guard<std::mutex> guard(radio_mutex);
-    try_and_catch_abort( [&]() -> void {
-        radio_->stopListening();
-        res=true; is_listening_=false;
-    });
     return res;
 }
