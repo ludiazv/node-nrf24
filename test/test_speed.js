@@ -37,7 +37,7 @@ var Pipes=["0xABCDABCD71","0x544d52687C"];
 const IRQ=22;
 const STREAM_SIZE=1024*4;
 var config={
-  PALevel: nrf24.RF24_PA_MIN,
+  PALevel: nrf24.RF24_PA_MAX,
   DataRate: nrf24.RF24_1MBPS,
   //DataRate: nrf24.RF24_1MBPS,
   //DataRate: nrf24.RF24_250KBPS,

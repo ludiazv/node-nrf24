@@ -118,7 +118,7 @@ nRF24::nRF24(int ce,int cs) :
   radio_(NULL), worker_(NULL),
   current_config(NULL),
   is_powered_up_(true),is_listening_(false), is_enabled_(true),
-  wpipe_ackmode_(true) , wpipe_maxstream_(1024) {
+  wpipe_ackmode_(true) , wpipe_maxstream_(1024){
     for(int i=0;i<6;i++) {
       used_pipes_[i]=false; // Unused pipes
       memset(&stats_[i],0,sizeof(RF24_stats_t)); // reset stats
@@ -405,7 +405,7 @@ NAN_METHOD(nRF24::removeReadPipe) {
 void nRF24::_removeReadPipe(int32_t number){
     if(number<=0 || number>5 || !is_enabled_ || radio_==NULL) return;
     bool all_closed=true;
-    
+
     try {
     std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
     //try_and_catch_abort([&]() -> void {
