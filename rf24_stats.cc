@@ -13,7 +13,7 @@ NAN_METHOD(nRF24::getStats) {
         Nan::Set(o,Nan::New("TotalTx_Err").ToLocalChecked(),Nan::New(THIS->stats_[0].sndError));
         MRET(o);
         return;
-      } else if(pipe >0 && pipe <5)
+      } else if(pipe >0 && pipe <=5)
           {
             MRET(THIS->stats_[pipe].rcv); // Return readed
             return;
@@ -41,7 +41,7 @@ NAN_METHOD(nRF24::resetStats) {
   std::lock_guard<std::mutex> guard(THIS->radio_mutex);
   if(info.Length()>=1 && info[0]->IsUint32()) {
     auto pipe=info[0]->Uint32Value();
-    if(pipe<=5) memset(&THIS->stats_[pipe],0,sizeof(stats_[pipe]));
-  } else memset(THIS->stats_,0,sizeof(stats_)); // Clear all
+    if(pipe>=0 && pipe<=5) memset(&THIS->stats_[pipe],0,sizeof(RF24_stats_t));
+  } else memset(&THIS->stats_[0],0,sizeof(RF24_stats_t)*6); // Clear all
 
 }
