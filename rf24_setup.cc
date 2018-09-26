@@ -79,7 +79,7 @@ void nRF24::_resetState() {
   radio_->flush_rx(); // Discart any bogus frame
   radio_->stopListening();
   sleep_us(1000);
-  radio_->txStandBy();   // Make shure transmit buffer is empty
+  //radio_->txStandBy();   // Make shure transmit buffer is empty
   is_listening_=false;
 }
 
@@ -207,6 +207,10 @@ void nRF24::_config(bool print_details) {
           radio_->disableCRC();
     else  radio_->setCRCLength((rf24_crclength_e)cc->CRCLength);
     radio_->txDelay= cc->TxDelay;
+    // Adjust txDelay with a factor of speed based on RF24 code for LINUX
+    if(cc->DataRate==RF24_250KBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 0.765) + 1;
+    if(cc->DataRate==RF24_2MBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 1.82) + 1;
+    //
     if(irq_>0) radio_->maskIRQ(1,1,0); // No mask Read IRQ.
     wpipe_ackmode_=cc->AutoAck;
     if(print_details) {
