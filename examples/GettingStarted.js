@@ -3,7 +3,12 @@
 const rf=require("../build/Release/nRF24");
 const readline = require('readline');
 
-var radio=new rf.nRF24(24,0);
+const CE=24,CS=0;
+//const CE=25,CS1=1;
+//const IRQ=-1;
+const IRQ=27;
+console.log("Cofiguration pins CE->",CE," CS->",CS," IRQ->",IRQ);
+var radio=new rf.nRF24(CE,CS);
 
 radio.begin(false);
 
@@ -14,8 +19,11 @@ if(!ready) {
 }
 
 var config={PALevel:rf.RF24_PA_LOW,
-            DataRate:rf.RF24_1MBPS,
-            Channel:76};
+            DataRate:rf.RF24_250KBPS,
+            Channel:76,
+            AutoAck:false,
+            Irq: IRQ
+          };
 
 
 radio.config(config,true);

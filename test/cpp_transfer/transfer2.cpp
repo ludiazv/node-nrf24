@@ -68,9 +68,10 @@ int main(int argc, char** argv){
   cout << "RF24/examples/Transfer/\n";
 
   radio.begin();                           // Setup and configure rf radio
-  radio.setChannel(78);
+  radio.setChannel(70);
   radio.setPALevel(RF24_PA_LOW);
-  radio.setDataRate(RF24_2MBPS);
+  //radio.setDataRate(RF24_2MBPS);
+  radio.setDataRate(RF24_250KBPS);
   radio.setAutoAck(1);                     // Ensure autoACK is enabled
   radio.setRetries(2,15);                  // Optionally, increase the delay between retries & # of retries
   radio.setCRCLength(RF24_CRC_8);          // Use 8-bit CRC for performance

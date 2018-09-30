@@ -1,12 +1,12 @@
 'use strict';
 const rf=require("../build/Release/nRF24");
-// Use this constructor with SPIDEV in Opi
+// Use this constructor with SPIDEV in Opi zero
 //var rfo=new rf.nRF24(6,10);
 
 // Std contructur Rpi
 //var rfo=new rf.nRF24(25,0);
 
-// Constructor for Boros RF2
+// Constructor for Boros RF2 radio 0
 var rfo=new rf.nRF24(24,0);
 
 var addresses=["0x65646f4e31","0x65646f4e32","0x65646f4e33"];
