@@ -14,6 +14,12 @@ uint32_t ObjGetUInt(v8::Local<v8::Object> & obj,const std::string & name) {
     auto v=ObjGet(obj,name);
     return (v->IsUint32()) ? v->Uint32Value() : 0;
 }
+
+int32_t ObjGetInt(v8::Local<v8::Object> & obj,const std::string & name) {
+    auto v=ObjGet(obj,name);
+    return (v->IsInt32()) ? v->Int32Value() : 0;
+}
+
 bool ObjGetBool(v8::Local<v8::Object> & obj,const std::string & name) {
   auto v=ObjGet(obj,name);
   return (v->IsBoolean()) ? v->BooleanValue() : true;
