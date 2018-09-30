@@ -1,5 +1,5 @@
-debug_key
-debug_key.pub
+debug_key*
+debug_key*.pub
 .DS_Store
 node_modules
 build
@@ -8,3 +8,6 @@ build
 package-lock.json
 upload.sh
 rf24_bup.cc
+.vscode
+test/irq
+
