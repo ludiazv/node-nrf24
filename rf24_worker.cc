@@ -121,7 +121,7 @@ void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& prog
         //std::cout<< "P"; 
     } // Wait section
   } // Main loop
-  std::cout <<"[reader Stop]";
+  //std::cout <<"[reader Stop]";
   stopped_=true; // stopped mark
 }
 
@@ -209,7 +209,7 @@ void nRF24::WriterWorker::Execute(){
   }
   finished_=true; // Transmission finished
   device.removeWriterWorker(); // Remove first in queue
-  std::cout << "TXOK:" << tx_ok;
+  //std::cout << "TXOK:" << tx_ok;
   //device.write_abort_mutex.unlock();
   //std::cout << "[AR]";
   }
