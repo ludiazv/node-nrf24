@@ -5,16 +5,16 @@
 
 class RF24Irq {
   public:
-  RF24Irq(uint8_t pin);
+  RF24Irq(uint32_t pin);
   ~RF24Irq();
 
   bool    begin(const char* mode,const char* edge);
   bool    configure(const char* mode,const char *edge);
-  inline  void    clear();
+  void    clear();
   int     wait(bool clear=true,uint32_t timeout=200);
   inline  uint8_t get() { return val; }
 
-  static void un_export(int p);
+  static void un_export(uint32_t p);
   static const char *DIR_INPUT;
   static const char *DIR_OUTPUT;
   static const char *EDGE_BOTH;
@@ -23,7 +23,7 @@ class RF24Irq {
   static const char *EDGE_NONE;
 
   private:
-    uint8_t pin;
+    uint32_t pin;
     int fd;
     uint8_t val;
     struct pollfd pfd;

@@ -17,7 +17,7 @@ const char *RF24Irq::EDGE_RISING="rising";
 const char *RF24Irq::EDGE_FALLING="falling";
 const char *RF24Irq::EDGE_NONE="none";
 
-RF24Irq::RF24Irq(uint8_t _pin) : pin(_pin), fd(-1) , val(0xFF) {
+RF24Irq::RF24Irq(uint32_t _pin) : pin(_pin), fd(-1) , val(0xFF) {
 
 }
 
@@ -28,7 +28,7 @@ RF24Irq::~RF24Irq() {
   unexport();
 }
 
-void RF24Irq::un_export(int p) {
+void RF24Irq::un_export(uint32_t p) {
   FILE *f;
 	f = fopen( GPIO_PATH "unexport", "w");
   if(f!=NULL) {
@@ -41,7 +41,7 @@ void RF24Irq::unexport(){
     RF24Irq::un_export(pin);
 }
 
-inline void RF24Irq::clear() {
+void RF24Irq::clear() {
   lseek(fd,0,SEEK_SET);
   read(fd,&val,1);
   /*int pending,i,pb,pr;
