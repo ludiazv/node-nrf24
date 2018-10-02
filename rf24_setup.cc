@@ -57,7 +57,7 @@ bool  nRF24::_begin(bool print_details) {
                                     res= res && radio_->isChipConnected();
                                     if(res) {
                                       radio_->powerUp();  // Powerup and mask all IRQ
-                                      radio_->maskIRQ(1,1,1);
+                                      radio_->maskIRQ(1,1,1); // Mask all IRQ
                                     }
                                     if(res && print_details) {
                                           radio_->printDetails();
@@ -79,7 +79,7 @@ void nRF24::_resetState() {
   radio_->flush_rx(); // Discart any bogus frame
   radio_->stopListening();
   sleep_us(1000);
-  //radio_->txStandBy();   // Make shure transmit buffer is empty
+  radio_->flush_tx(); // Make shure transmit buffer is empty
   is_listening_=false;
 }
 
@@ -114,7 +114,7 @@ NAN_METHOD(nRF24::New) {
 }
 
 nRF24::nRF24(int ce,int cs) :
-   ce_(ce), cs_(cs),irq_(-1),
+   ce_(ce), cs_(cs),irq_num_(-1),irq_(NULL),
   radio_(NULL), worker_(NULL),
   current_config(NULL),
   is_powered_up_(true),is_listening_(false), is_enabled_(true),
@@ -134,9 +134,11 @@ nRF24::~nRF24() {
     if(worker_) worker_->stop();
     if(radio_) delete radio_;
     if(current_config) delete current_config;
+    if(irq_) delete irq_;
     current_config=NULL;
     radio_=NULL;
     worker_=NULL;
+    irq_=NULL;
   }
 
 /* Config */
@@ -161,11 +163,11 @@ NAN_METHOD(nRF24::config) {
       if(ObjHas(_obj,"CRCLength")) cc->CRCLength=(uint8_t)ObjGetUInt(_obj,"CRCLength");
       if(ObjHas(_obj,"AutoAck")) cc->AutoAck=(uint8_t)ObjGetBool(_obj,"AutoAck");
       if(ObjHas(_obj,"TxDelay")) cc->TxDelay=ObjGetUInt(_obj,"TxDelay");
-      if(ObjHas(_obj,"Irq")) THIS->irq_=(uint8_t)ObjGetUInt(_obj,"Irq");
+      if(ObjHas(_obj,"Irq")) THIS->irq_num_=(int)ObjGetInt(_obj,"Irq");
       if(ObjHas(_obj,"PollBaseTime")) cc->PollBaseTime=ObjGetUInt(_obj,"PollBaseTime");
       // Validate Fieds and set to default if invalid
 
-      if(cc->PALevel>3)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
+      if(cc->PALevel>4)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
       if(cc->Channel<1 || cc->Channel>127) cc->Channel=DEFAULT_RF24_CONF.Channel;
       if(cc->DataRate>2) cc->DataRate=DEFAULT_RF24_CONF.DataRate;
       if(cc->PayloadSize <1 || cc->PayloadSize >32) cc->PayloadSize=DEFAULT_RF24_CONF.PayloadSize;
@@ -210,15 +212,29 @@ void nRF24::_config(bool print_details) {
     // Adjust txDelay with a factor of speed based on RF24 code for LINUX
     if(cc->DataRate==RF24_250KBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 0.765) + 1;
     if(cc->DataRate==RF24_2MBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 1.82) + 1;
-    //
-    if(irq_>0) radio_->maskIRQ(1,1,0); // No mask Read IRQ.
+    //Configure the IRQ
+    if(irq_num_>=0) {
+      if(irq_!=NULL) delete irq_;
+      irq_=new RF24Irq(irq_num_);
+      if(!irq_->begin(RF24Irq::DIR_INPUT,RF24Irq::EDGE_FALLING)) {
+        delete irq_;
+        irq_=NULL;
+        irq_num_=-1; // Fallback to pooling
+      } else {
+        irq_->clear();
+        radio_->maskIRQ(0,0,0); // No mask any interrupt
+      }
+    }  
     wpipe_ackmode_=cc->AutoAck;
     if(print_details) {
         std::cout << "Radio details after config:" << std::endl;
+        std::cout << "===========================" << std::endl;
         radio_->printDetails();
-        std::cout << "IRQ gpio (negative is disabled)" << irq_;
-        std::cout << std::endl << "Config internals:" << std::endl;
+        std::cout << "IRQ gpio (negative if disabled):" << irq_num_<< "("<< irq_ << ")" << std::endl;
+        std::cout << "Config internals:" << std::endl;
+        std::cout << "check the values as incorrect values fallback to default values." << std::endl;
         std::cout << *cc << std::endl;
+        std::cout << "===========================" << std::endl;
    }
     _resetState(); // Rest radio state.
   //});
