@@ -89,12 +89,12 @@ int nRF24::_read_buffered(std::set<uint8_t> &pending,bool &more_available){
   return ret;
 }
 
-int nRF24::_waitIrq(uint32_t timeout_ms,bool clear) {
+int nRF24::_waitIrq(int32_t timeout_ms,bool clear) {
   if(irq_){
     return irq_->wait(clear,timeout_ms);
   }
   else {
-    sleep_us(1000*timeout_ms); // Fallback to sleep
+    if(timeout>0) sleep_us(1000*timeout_ms); // Fallback to sleep
     return 0;  // Return timewait
   }
 }

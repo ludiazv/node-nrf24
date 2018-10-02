@@ -181,7 +181,7 @@ class nRF24 : public Nan::ObjectWrap {
   void _cleanBuffers(const std::set<uint8_t> *pipes=NULL);
   void _copyBuffers(const std::set<uint8_t>*pipes,std::vector<uint8_t> *to);
   void _resetStats(uint8_t pipe=7);
-  int  _waitIrq(uint32_t timeout_ms,bool clear=false);
+  int  _waitIrq(int32_t timeout_ms,bool clear=false);
 
 
   // uitlity one-liners
