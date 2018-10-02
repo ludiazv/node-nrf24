@@ -1,10 +1,10 @@
 #include "rf24.hpp"
 #include "tryabort.hpp"
-#include "irq.hpp"
 
 
 /* Reader Class */
 /* ============ */
+std::mutex nRF24::ReaderWorker::one_reader_mutex; // Static mutex
 void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& progress_) {
   /* Legacy Implementation
   char frame[32+1];
@@ -38,98 +38,91 @@ void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& prog
     usleep(half);
   }
   */
-  stopped_=false;
-  std::set<uint8_t> pipes;
-  //RF24AsyncType_t tmp_msg[5];
-  int ret;
-  bool more_pending, lock_or_continue=true;
-  // Delays
-  struct timespec micro_sleep,short_sleep,base_sleep;
-  //struct timespec start_measure;
-  UsToTimeSpec(650, &micro_sleep);
+  // Main control variables
+  std::lock_guard<std::mutex>  one_reader_guard(nRF24::ReaderWorker::one_reader_mutex); // Mutex to control accidental lauch of multiple readers
+  stopped_=false;             // Stopped flag
+  std::set<uint8_t> pipes;    // Pipes set
+  int ret;                    // Number of packets received
+  bool more_pending=false;    // Reader reported more items pending
+  bool continue_polling=true; // Control flag to keep polling reads 
+  // Delays 
+  struct timespec micro_sleep;  // Small sleep
+  struct timespec short_sleep;  // short wait polling
+  struct timespec base_sleep;   // full wait polling
+  
+  UsToTimeSpec(500, &micro_sleep);   // Computte the timespecs
   UsToTimeSpec(poll_timeus/4,&short_sleep);
   UsToTimeSpec(poll_timeus, &base_sleep);
+  //-----
 
   // Init IRQ if needed
+  //struct timespec start_measure;
   //m_start(&start_measure);
-  RF24Irq *irq=NULL;
-  if(device._use_irq()) {
-      irq=new RF24Irq(device._get_irq());
-      if(!irq->begin(RF24Irq::DIR_INPUT,RF24Irq::EDGE_FALLING)) {
-        delete irq;
-        irq=NULL;
-      }
-  }
   device._cleanBuffers(NULL); // Sure to clear all buffers
-  // Main loop
+  // Main loop Exit condtions:
+  //   case A) user want_stop flaging want_stop variable
+  //   case B) error count > MAX_ERROR (break call inside the loop)
   while(!want_stop) {
-    if(lock_or_continue) {
-      device.radio_write_mutex.lock();
-      device._listen();
-    }
+    
+    { // Preparantion and exclusion
+    std::lock_guard<std::mutex> writeguard(device.radio_write_mutex);
+    //device.radio_write_mutex.lock(); // Adquire the mutex for write (exclude writers or wait for finish)
+    device._listen(); // Set the radio in listen mode.
+    continue_polling=true; // Try allways to read.
+    // Polling loop Exit conditions:
+    // A) no available transmissions continue_polling will be false
+    //  Continue pollin will be on if there are pending writes. The loop tries twice if something is received
+    while(continue_polling) {
+      ret=device._read_buffered(pipes,more_pending);
+      //std::cout << "{R:" << ret << ", T:" << m_end(&start_measure,true) << "ms, M:"<< more_pending << "}";
+      if(ret>0) { // Reads ready
+        //std::cout << "Ret:" << ret << " more pendig:"<< more_pending << std::endl;
+        //std::cout << "R:" << ret << ", T:" << m_end(&start_measure,true) << "ms, M:"<< more_pending << " / ";
+        //m_start(&start_measure);
+        size_t n_pipes=pipes.size(); // number of pipes
+        int j=0;
+        for(auto i=pipes.begin();i!=pipes.end();i++) { // Copy the buffer locally
+            tmp_msg[j].pipe=*i;
+            tmp_msg[j].size=device._get_raw_buffer_size(*i);
+            memcpy(&tmp_msg[j].buffer[0],device._get_raw_buffer(*i),tmp_msg[j].size);
+            j++;
+        }
+        progress_.Send(&tmp_msg[0],n_pipes); // Send it
+        device._cleanBuffers(&pipes);       // Clear the buffer
+        pipes.clear();         // Clear the pipes set
+        if(!more_pending) sleep_ts(&micro_sleep); // optimization: give some minimal sleep to check if more is comming
+      } else {
+          continue_polling=false; // Nothing to read stop -> stop polling
+          error_count = (ret<0) ? error_count+1 : 0;  // if error increase the error count / if no erro clear error conunt
+      }     
+    } // Pooling loop
 
-    ret=device._read_buffered(pipes,more_pending);
-    if(ret>0) { // Reads ready
-      //std::cout << "Ret:" << ret << " more pendig:"<< more_pending << std::endl;
-      //std::cout << "R:" << ret << ", T:" << m_end(&start_measure,true) << "us, M:"<< more_pending << " / ";
-      //m_start(&start_measure);
-      size_t n_pipes=pipes.size();
-      //RF24AsyncType *tmp_msg=new RF24AsyncType[n_pipes];
-      int j=0;
-      for(auto i=pipes.begin();i!=pipes.end();i++){
-         tmp_msg[j].pipe=*i;
-         tmp_msg[j].size=device._get_raw_buffer_size(*i);
-         memcpy(&tmp_msg[j].buffer[0],device._get_raw_buffer(*i),tmp_msg[j].size);
-         //tmp_msg[j].buffer[0]=(uint8_t) *i;
-         //memcpy(&tmp_msg[j].buffer[1],device._get_raw_buffer(*i),tmp_msg[j].size);
-         //progress_.Send(&tmp_msg[j].buffer[0],tmp_msg[j].size+1);
-         j++;
-      }
-
-      progress_.Send(&tmp_msg[0],n_pipes); // Send it , this will create a copy of tmp_msg
-      device._cleanBuffers(&pipes);
-      pipes.clear();
-      lock_or_continue=false;
-      if(!more_pending) sleep_ts(&micro_sleep);
-      continue;
-    }else { // Error || nothing
-      lock_or_continue=true;
-      device.radio_write_mutex.unlock(); // writers can write
-      if(ret<0) { // Error
-        error_count++;
-        if(error_count>RF24_MAX_ERROR_COUNT) break; // Extit loop
-      }
-      else {// Nothing more_pending
-          error_count=0;
-      }
-    }
-    if(want_stop) break;
-    if(irq==NULL) {
-      // If no IRQ is used we do pooling giving more time if want_towrite
-      //m_start(&start_measure);
-      if(want_towrite) sleep_ts(&base_sleep); else sleep_ts(&short_sleep);
-      //std::cout<<"[P:"<< m_end(&start_measure) << "us]";
-      //std::cout<< "P";
-    } else { // Use IRQ pooling
-
-          int irq_ret;
-          //m_start(&start_measure);
-          //do {
-          irq_ret=irq->wait(false,RF24_IRQ_POLLTIME);
-          //}while(!want_stop && irq_ret==0);
-          if(irq_ret>0) continue;
-          if(irq_ret<0) {
-            error_count++;
-            if(error_count>RF24_MAX_ERROR_COUNT) break; // Extit loop
-          }
-    }
-
-  } // While loop
-
-  if(!lock_or_continue) device.radio_write_mutex.unlock();
-  if(irq) delete irq;
-
-  stopped_=true;
+    //device.radio_write_mutex.unlock(); // writers can write if they want
+    
+    }// Mutex sextion
+    if(error_count>RF24_MAX_ERROR_COUNT) break; // Extit loop if error cuont exedd limit
+    // Wait section
+    if(device._use_irq()) {
+        //m_start(&start_measure);
+        int irq_ret;
+        //std::cout << "[IB]";
+        //do {
+        irq_ret=device._waitIrq(RF24_IRQ_POLLTIME /*-1*/);
+        //} while(want_towrite>0 && irq_ret>0);
+        //std::cout <<"[IE]";
+        //std::cout<<"[P:"<< m_end(&start_measure,true) << "ms] [irq ret:" << irq_ret << "]";
+        //m_start(&start_measure);
+        if(irq_ret<0) error_count++; // if negative increase error
+    } else { // Use poolling
+        // If no IRQ is used we do pooling giving more time if want_towrite
+        //m_start(&start_measure);
+        if(want_towrite>0) sleep_ts(&base_sleep); else sleep_ts(&short_sleep); // If want to write give more time
+        //std::cout<<"[P:"<< m_end(&start_measure) << "us]";
+        //std::cout<< "P"; 
+    } // Wait section
+  } // Main loop
+  std::cout <<"[reader Stop]";
+  stopped_=true; // stopped mark
 }
 
 void nRF24::ReaderWorker::HandleProgressCallback(const RF24AsyncType *data, size_t size) {
@@ -185,13 +178,13 @@ void nRF24::ReaderWorker::want_write(){
   want_towrite++;
 }
 
-void nRF24::ReaderWorker::no_want_write()
-{
+void nRF24::ReaderWorker::no_want_write(){
     std::lock_guard<std::mutex> guard(wantwrite_mutex);
     if(want_towrite>0) want_towrite--;
 }
 
 /* Writter Class */
+/* ============= */
 void nRF24::WriterWorker::Execute(){
 
   // Compute n_packets
@@ -200,10 +193,12 @@ void nRF24::WriterWorker::Execute(){
   size_t rem= buffer_size % pck_size;
   size_t n_packets= buffer_size / pck_size;
   tx_requested= n_packets + (( rem ==0 ) ? 0 : 1);
+  //std::cout << "Size:" << buffer_size << " pkt size:" << (int)pck_size << 
+  //             "full pck:" << n_packets << " requested:" << tx_requested << std::endl;
   // 1st Lock with the possibility of aborting pending
   //std::cout << "[BL]";
   {
-  std::lock_guard<std::mutex> lock(device.write_abort_mutex);
+  std::lock_guard<std::mutex> abort_guard(device.write_abort_mutex);
   //std::cout << "[AL]";
   started_=true; // Transmission started
   if(!aborted_ && buffer!=NULL) {
@@ -214,6 +209,7 @@ void nRF24::WriterWorker::Execute(){
   }
   finished_=true; // Transmission finished
   device.removeWriterWorker(); // Remove first in queue
+  std::cout << "TXOK:" << tx_ok;
   //device.write_abort_mutex.unlock();
   //std::cout << "[AR]";
   }
