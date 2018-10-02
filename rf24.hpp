@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 #include "rf24_config.hpp"
+#include "irq.hpp"
 #include "rf24_util.hpp"
 
 // Config structures
@@ -64,6 +65,7 @@ class nRF24 : public Nan::ObjectWrap {
 
    private:
     std::mutex wantwrite_mutex;
+    static std::mutex one_reader_mutex; 
     Nan::Callback *progress;
     nRF24 &device;
     volatile bool  want_stop,stopped_;
@@ -147,6 +149,7 @@ class nRF24 : public Nan::ObjectWrap {
       NANCONSTI("RF24_PA_LOW",RF24_PA_LOW);
       NANCONSTI("RF24_PA_HIGH",RF24_PA_HIGH);
       NANCONSTI("RF24_PA_MAX",RF24_PA_MAX);
+      NANCONSTI("RF24_PA_ULTRA",RF24_PA_MAX+1);
       NANCONSTI("RF24_CRC_DISABLED",RF24_CRC_DISABLED);
       NANCONSTI("RF24_CRC_8",RF24_CRC_8);
       NANCONSTI("RF24_CRC_16",RF24_CRC_16);
@@ -178,6 +181,7 @@ class nRF24 : public Nan::ObjectWrap {
   void _cleanBuffers(const std::set<uint8_t> *pipes=NULL);
   void _copyBuffers(const std::set<uint8_t>*pipes,std::vector<uint8_t> *to);
   void _resetStats(uint8_t pipe=7);
+  int  _waitIrq(uint32_t timeout_ms,bool clear=false);
 
 
   // uitlity one-liners
@@ -186,10 +190,11 @@ class nRF24 : public Nan::ObjectWrap {
   inline bool        _has_config() {return current_config!=NULL ; }
   inline RF24*       _get_radio() {return radio_; }
   inline void        _get_cecs(int& ce,int& cs) { ce=ce_; cs=cs_; }
-  inline int         _get_irq() { return irq_; }
+  inline int         _get_irq_num() { return irq_num_; }
   inline useconds_t  _get_polltime() { return _get_config()->PollBaseTime; }
   inline void        _enable(bool e=true) { is_enabled_ = e; } // enable disable.
-  inline bool        _use_irq() { return irq_>0; }
+  inline bool        _use_irq() { return irq_!=NULL; }
+  inline bool        _is_listening() { return is_listening_; }
 
 
 
@@ -238,8 +243,9 @@ class nRF24 : public Nan::ObjectWrap {
 
 
   // Class attributtes
-  int ce_,cs_,irq_;   // CE, CS & IRQ lines
-  std::mutex radio_mutex,radio_write_mutex,write_abort_mutex,write_queue_mutex;
+  int ce_,cs_,irq_num_;   // CE, CS & IRQ lines
+  RF24Irq *irq_;          ///<Irq object
+  std::mutex radio_mutex,radio_write_mutex,write_abort_mutex,write_queue_mutex; // Coordination mutex
   RF24 *radio_;   // RADIO
   nRF24::ReaderWorker *worker_;  // READER WORKER
   RF24_conf_t *current_config;  // Curent config
