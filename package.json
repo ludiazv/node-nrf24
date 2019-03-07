@@ -1,6 +1,6 @@
 {
   "name": "nrf24",
-  "version": "0.0.0-alpha4",
+  "version": "0.1.0-beta",
   "description": "nRF24 (nrf24l01/nrfl24l01+) radios in the nodejs way",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "preinstall": "./build_rf24libs.sh",
     "install": "node-gyp rebuild"
   },
-  "repository":{
+  "repository": {
     "type": "git",
     "url": "https://github.com/ludiazv/node-nrf24.git"
   },
