@@ -10,4 +10,5 @@ upload.sh
 rf24_bup.cc
 .vscode
 test/irq
+npm-debug.log
 

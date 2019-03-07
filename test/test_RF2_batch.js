@@ -58,8 +58,8 @@ function destroyRadios() {
 
 
 function configRadios(conf) {
-  var c0=Object.assign(conf,{Irq: IRQ[0]});
-  var c1=Object.assign(conf,{Irq: IRQ[1]});
+  var c0=Object.assign({Irq: IRQ[0]},conf);
+  var c1=Object.assign({Irq: IRQ[1]},conf);
   console.log("CONFIG R0!"); radio0.config(c0,SHOW_CONFIG);
   console.log("CONFIG R1!"); radio1.config(c1,SHOW_CONFIG);
 }
@@ -192,13 +192,13 @@ console.log("Test Started... CTRL+C to close N_CPUS:",NUMBER_CPUS);
 var cpu;
 var test_nr=-1;
 var TestSuite= [
-  /*['OneWay',5,false,rf.RF24_2MBPS,true],
+  ['OneWay',5,false,rf.RF24_2MBPS,true],
   ['OneWay',5,false,rf.RF24_1MBPS,false],
   ['OneWay',5,false,rf.RF24_250KBPS,true],
   ['OneWay',5,true,rf.RF24_2MBPS,false],
   ['OneWay',5,true,rf.RF24_1MBPS,true],
-  ['OneWay',5,true,rf.RF24_250KBPS,false],*/
-  ['Transfer',180,true,rf.RF24_1MBPS]
+  ['OneWay',5,true,rf.RF24_250KBPS,false]
+  //['Transfer',180,true,rf.RF24_1MBPS]
 ];
 
 function test_next() {

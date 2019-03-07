@@ -25,7 +25,6 @@ This nodejs add-on has the following features:
 2. Create a __RF24Mesh__ network as master or Join to a *RF24Mesh* as node.
 3. Provide a __RF24Gateway__ directly on nodeJs to provide TCP/IP connectivity for your radios. *[In development]*
 
-
 ## Installation
 
 ### Prerequisites:
@@ -52,33 +51,33 @@ A *nRF24L01(+)* radio must be wired to your system and tested for connection. RF
 
 An example of wiring for an OrangePi Zero(using SPI 1 bus) and Rpi (using SPI 0 bus) is show in the following table:
 
-| PIN NRF24L01 | OrangePi Zero Pin |
-| -------------- | ----------------- |
-| 1 GND          |  opi-gnd (25)
-| 2 VCC          |  opi-3v3 (17)
-| 3	CE	         |  opi-PA6	(7)
-| 4	CSN	         |  opi-spi1cs0 (24)
-| 5	SCK	         |  opi-spi1Sck (14)
-| 6	MOSI	       |  opi-spi1Mosi (19) |
-| 7	MISO	       |  opi-spi1Miso (16) |
-| 8	IRQ		       |  not connected / optional  |  
+| PIN NRF24L01 | OrangePi Zero Pin    |
+| -------------- | ------------------ |
+| 1 GND          |  opi-gnd (25)      |
+| 2 VCC          |  opi-3v3 (17)      |
+| 3 CE           |  opi-PA6 (7) (selectable)  |
+| 4 CSN	         |  opi-spi1cs0 (24)  |
+| 5 SCK	         |  opi-spi1Sck (14)  |
+| 6 MOSI	       |  opi-spi1Mosi (19) |
+| 7 MISO       |  opi-spi1Miso (16) |
+| 8 IRQ          |  not connected / optional  |
 
 
 
 | PIN	NRF24L01	| RPI	RPi -P1 Connector |
 | ------------- | --------------------- |
-| 1	GND	        | rpi-gnd	(25)
-| 2	VCC	        | rpi-3v3	(17)
-| 3	CE	        | rpi-gpio22	(15)
-| 4	CSN	        | rpi-gpio8	(24)
-| 5	SCK	        | rpi-sckl	(23)
-| 6	MOSI	      | rpi-mosi	(19)
-| 7	MISO	      | rpi-miso	(21)
-| 8	IRQ		      |  not connected  / optional            
+| 1 GND	       | rpi-gnd	(25) |
+| 2 VCC	      | rpi-3v3	(17) |
+| 3 CE	       | rpi-gpio22	(15) |
+| 4 CSN	       | rpi-gpio8	(24) |
+| 5 SCK	       | rpi-sckl	(23) |
+| 6 MOSI	     | rpi-mosi	(19) |
+| 7 MISO	     | rpi-miso	(21) |
+| 8 IRQ		     |  not connected  / optional |
 
 Understand your wiring is critical for hardware initialization as there are not hardware discovery mechanism implemented in the library.
 
-For better performance and lower CPU usage is recommended to connect also the __PIN 8 (IRQ line)__ an additional GPIO line. Check-out the ``config`` API addtional information about IRQ management.
+For better performance and lower CPU usage is recommended to connect also the __PIN 8 (IRQ line)__ an additional GPIO line. Check-out the ``config`` API addtional information about IRQ management. 
 
 #### RF24* libraries installed
 
@@ -87,7 +86,7 @@ RF24* libs must be installed in the system. Please check out  [this](http://tmrh
 You can use the installation script in this repository than will compile and install then
 libraries with the standard driver SPIDEV:
 
-```
+```bash
 # cd $HOME
 # ./build_rf24libs.sh
 ```
@@ -100,18 +99,18 @@ it should work on a typical linux environments. nRF24 c++ support different driv
 ### Install the nrf24 package
 
 Use NPM as with other modules:
-```
+```bash
 cd <your project>
 npm install nrf24 --save
 ```
 This will add nrf24 to your project and save the dependence in your __package.json__
 
-__disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essential" packages installed according to your linux distribution.
+__disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essential","base-devel" packages installed according to your linux distribution.
 
 ## Usage
 
 ### Basic RF24
-Enable **nodejs** have basic communication over __nRF24L01(+)__ radios in  a simple javascript code:
+Enable **nodejs** have basic communication over __nRF24L01(+)__ radios in a simple javascript code:
 
 ```javascript
 ...
@@ -123,7 +122,7 @@ rf24.begin();
 rf24.config({
   PALevel: nrf24.RF24_PA_LOW,
   DataRate: nrf24.RF24_1MBPS,
-  ...
+  ... // Other config
 });
 
 // Register Reading pipes
@@ -169,6 +168,38 @@ rf24.destroy();
 
 ```
 
+### Streaming data
+The maximun payload of NRF24 radios is 32 bytes. In order to transmit or recive streams bigger buffers of data the module offers some helpers for this operations. 
+
+Streaming data can be acomplished by using stream function:
+```javascript
+rf24.changeWritePipe(true,2048); // Set max stream size to 2Kb
+
+var big_buffer=Buffer.from(<data_up_to_2K>);
+rf24.stream(big_buffer,function(success,tx_ok,tx_bytes,tx_req,frame_size,aborted) {
+  if(success) console.log("Stream ok");
+  else {
+    console.log("Transfered:"+tx_bytes+ " total:" + tx_req + " OK->" + tx_ok);
+  }
+});
+```
+
+Receiving streaming data:
+
+Receiving streaming data do not require special function. ``read()``function will receive the incoming frames. To improve perfomance 
+
+```javascript
+rf24.changeReadPipe(pipenr,false,10); // Wil merge up to 10 frames with out 
+
+```
+
+
+### Peformance
+
+Starting form version 1.0-beta the improvement of perfomance is significant. To archive beter 
+
+Check this [this](PERFORMACE.md) page to check a baseline performed that can be archived with the library.
+
 ### RF24Mesh
 
 TODO documentation
@@ -195,9 +226,9 @@ for your specific case.
 | Param | description |
 | ----- | ----------- |
 | ce    | GPIO # for CE pin |
-| cs    | SPI Chip Select pin. For SPIDEV the mapping is (a * 10 + b)  for /dev/spideva.b
+| cs    | SPI Chip Select pin. For SPIDEV the mapping is (a * 10 + b)  for /dev/spideva.b |
 
-Both parameters are mandatory. Constructor must be called with __new__ keyword to create a new RF24 object, otherwise the call will produce an exception.
+Both parameters are mandatory. Constructor must be called with __new__ keyword to create a new RF24 object, otherwise thiscall will produce an exception.
 
 *Example:*
 ```javascript
@@ -212,11 +243,11 @@ var rf24=new nrf24.RF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /d
 
 *Throws:*: TypeError Exception if the parameters CS or CE are invalid.
 
-### destroy() Explicit destructor
-Destroy the object __This method must be called__ if its needed to reclaim the memory and resources. If there is
-any pending reads on the reading queue or pending async writes will be distracted.
+#### destroy() Explicit destructor
+Destroy the object __This method must be called__ if its needed to reclaim the memory and resources. If there is any pending reads on the reading queue or pending async writes will be cancelled.
 
 *Example:*
+
 ```javascript
 let rf24=new nrf24.RF24(22,0);
 ...
@@ -236,7 +267,7 @@ After the creation of the object it is required to call to begin. If begin initi
 
 | Param | description |
 | ----- | ----------- |
-| print_debug (optional)    | true/false prints RF24 debug information in stdout (it will be useful for debugging  purposes). default=false
+| print_debug (optional)    | true/false prints RF24 debug information in stdout (it will be useful for debugging  purposes). default=false |
 
 *Example:*
 
@@ -259,7 +290,7 @@ Configure the radio with some generally used configuration parameters. This func
 
 | Property | description (valid values) | Default Value |
 | -----    | ----------- | ------------- |
-| PALevel  | Transmission power (MIN, LOW, HIGH, MAX) | MIN
+| PALevel  | Transmission power (MIN, LOW, HIGH, MAX,ULTRA) | MIN |
 | DataRate | Speed of transmission bps (2MBPS,1MBPS,250KB)            | 1MBPS |
 | Channel  | Radio Channel (1-127)  | 76 |
 | CRCLength| Length of CRC checksum for data integrity checking (8bit,16bit, disabled)  | CRC 16 bit  |
@@ -278,11 +309,13 @@ node-rf24 exports some constants to help to define:
 
 | Item | Values |
 | ---- | ------ |
-| Speed | RF24_1MBPS, RF24_2MBPS,RF24_250KBPS
-| Power Level  |  RF24_PA_MIN,RF24_PA_LOW,RF24_PA_HIGH,RF24_PA_HIGH, RF24_PA_MAX |
+| Speed | RF24_1MBPS, RF24_2MBPS,RF24_250KBPS |
+| Power Level  |  RF24_PA_MIN,RF24_PA_LOW,RF24_PA_HIGH,RF24_PA_HIGH, RF24_PA_MAX ,RF24_PA_ULTRA |
 | CRC Checking  | RF24_CRC_DISABLED,RF24_CRC_8,RF24_CRC_16  |
 
 __note__: 250KBPS seed is only available in nRF24L01+ variant. If your radio is a nRF24L01 this speed option will not work.
+
+__note__: PA_ULTRA can be used only in nRF24L01 clones that uses a compatible chip Si24R01.
 
 The second parameter ``print_details`` is optional boolean to show in stdout the configuration of the radio after config is executed. This is useful for debugging.
 
@@ -304,7 +337,7 @@ rf24.config(conf); // Configuration will be applied.
 
 *Throws:* Syntax Error exception if errors of on parameters are found.
 
-### present()
+#### present()
 Check if radio is connected. This function must be called after begin to work properly.
 
 *parameters*: none.
@@ -319,7 +352,7 @@ console.log("Radio connected:" + rf24.present()); // Prints true/false if radio 
 
 *Throws*: nothing.
 
-### isP()
+#### isP()
 Check if the connected radio is nRF24L01+ variant.This function must be called after begin to work properly.
 
 *parameters*: none.
@@ -334,7 +367,7 @@ console.log("Is + Variant:" + rf24.isP()); // Prints true/false if radio is + Va
 
 *Throws*: nothing.
 
-### powerUp() / powerDown()
+#### powerUp() / powerDown()
 Disable/enable radio saving energy when not in use. By Default after ```begin()```the radio will be powered up. Note that no information can be received or transmitted but in exchange the power consumption of the radio will be less than 1uA(sleep mode).
 
 Note that if you are listening for radio frames via ```read()``` API you must call ```stopRead()``` before put the radio to sleep. Conversely if there are pending async writes the API ``stopWrite()`` must be called before the radio can be powered down.
@@ -362,7 +395,7 @@ rf24.powerDown();
 
 *Throws*: nothing.
 
-### addReadPipe(addr,auto_ack=default value)
+#### addReadPipe(addr,auto_ack=default value)
 Before being able to receive any frame a **reading pipe** must be registered. A reading pipe is a one-way address-based radio tunnel that need to be used by the transmitter to communicate with the receiver. In a typical radio communication the receiver will 'listen' on a predefined pipe address and the transmitter will 'send' to the same predefined address.
 
 For a two-way communication to be possible the transmitter reading pipe needs to be the same to the receiver writing pipe and vice versa. This two cross-pipe configuration enable seamless two-way transmissions.
@@ -397,7 +430,7 @@ else console.log("Pipe opened" + pipenr);
 *Throws*: SyntaxError if parameters are invalid.
 
 
-### removeReadPipe(pipenr)
+#### removeReadPipe(pipenr)
 Deregister a pipe to read from. This function can be used to reconfigure close reading pipes registered with addReadPipe.
 
 *parameters*:
@@ -410,7 +443,7 @@ Deregister a pipe to read from. This function can be used to reconfigure close r
 
 *throws:* SyntaxError if parameters are invalid.
 
-### changeReadPipe(pipenr,auto_ack,maxmerge)
+#### changeReadPipe(pipenr,auto_ack,maxmerge)
 Change the configuration of the a reading pipe. It should be called after ``addReadPipe`` **only**.
 
 *parameters*:
@@ -419,7 +452,7 @@ Change the configuration of the a reading pipe. It should be called after ``addR
 | --------- | ----------- |
 | pipenr    | pipe number descriptor returned by addReadPipe   |
 | auto_ack  | true/false nRF24 support to send ACK to the transmitter by the hardware. |
-| maxmerge  | Maximum number of frames to merge in a single read event on the pipe.
+| maxmerge  | Maximum number of frames to merge in a single read event on the pipe. |
 
  maxmerge is special parameter that can be used in streaming use cases. This parameter inform the reading loop that the user will accept *merging* consecutive frames on the pipe (up to the maximum number of frames specified). __Note__ that this value is maximum value and do not guaranteed that the incoming frames will be merged.
 
@@ -440,7 +473,7 @@ if(pipenr>0) {
 
  *throws:* SyntaxError if parameters are not valid.
 
-### read(rcv_callback,stop_callback)
+#### read(rcv_callback,stop_callback)
 Register async callback for receiving information over the radio. This will enable the radio to receive frames from other radios. Reading pipes registered via addReadPipe will be used.
 
 __Note:__ Have in mind that read callback is unique for all pipes and is not possible to register several call-backs. If read is called multiple times only the first one will used. To register another callback ```stop_read()``` must be called and then another call to ```read()``` will be successful.
@@ -484,8 +517,7 @@ function(stop,by_user,err_count) {
 
 *Throws:*: SyntaxError if parameters are invalid.
 
-
-### stopRead()
+#### stopRead()
 Stop listening for radio frames from the radio. This function is intended halt any further reading, however, as read mechanism is async it is possible that any pending read is delivered to reading callback. After successful halt of reading operation a ``` stop_callback ``` will be called, at this point no further frames will be received in ```rcv_callback ```.
 
 This function will take more than 200ms to complete blocking your JS code. Therefore it should be used mainly to shut down communication not being designed for switching purposes.
@@ -517,8 +549,7 @@ rf24.stopRead();
 
 *throws:* nothing.
 
-
-### useWritePipe(addrs,auto_ack=default_value)
+#### useWritePipe(addrs,auto_ack=default_value)
 Define the output pipe to write to. __nRF24L01__ have only one output pipe with
 pipe number *0*. This call is the counter part of *addReadPipe* in the transmitter side.
 All comments about pipes explained there applies also to this pipe.
@@ -533,6 +564,7 @@ All comments about pipes explained there applies also to this pipe.
 if auto_ack is used the default value provided in *config* will be used.
 
 *Example*:
+
 ```javascript
 rf24.begin();
 rf24.useWritePipe("0xABCD11FF55");
@@ -540,11 +572,12 @@ rf24.useWritePipe("0xABCD11FF55");
 rf24.write(...) // This will be written to '0xABCD11FF55'
 
 ```
+
 *Returns*: nothing
 
 *Throws*: SyntaxError if parameters are invalid.
 
-### changeWritePipe(auto_ack,stream_maxsize)
+#### changeWritePipe(auto_ack,stream_maxsize)
 Changes write pipe configuration. This API **must** be called after ``useWritePipe``.
 
 *parameters*:
@@ -554,14 +587,13 @@ Changes write pipe configuration. This API **must** be called after ``useWritePi
 | auto_ack  | true/false nRF24 support to wait to ACK from the transmitter by the hardware |
 | stream_maxsize | Maximum size in bytes of buffer in stream mode.
 
-The maximum buffer is reset to a default value of ``1204``bytes after calling to ``useWritePipe`` so to change it this function must be called every time the writting pipe is changed.  
+The maximum buffer is reset to a default value of ``1204``bytes after calling to ``useWritePipe`` so to change it this function must be called every time the writting pipe is changed. Note also that the ``write()`` function ignores the parameter ``stream_maxsize`` and it will be only applicable using the ``stream()`` API (see below).
 
 *returns*: Nothing
 
 *throws:* SyntaxError if parameters are invalid.
 
-
-### write(buffer,wr_callback *optional*)
+#### write(buffer,wr_callback *optional*)
 Send data over the radio in sync or async mode. If sync mode used ``wr_callback`` function must not be provided but the execution of JS code will block until transfer is finished. This could take up to 4ms for a 32 byte frame that could be acceptable or not depending on the use-case.
 
 *parameters*:
@@ -583,6 +615,7 @@ wr_callback is a regular js callaback with the following parameters:
 
 *example*:
 sync mode:
+
 ```javascript
 if(rf24.write(Buffer.from(<data>)))
     console.log("WR OK!");
@@ -590,12 +623,13 @@ else
     console.log("Failed!");
 
 ```
+
 asyc mode:
+
 ```javascript
-rf24.write(Buffer.from(<data>),function(success){
+rf24.write(Buffer.from(<data>),function(success,...){
   if(success) console.log("WR OK!"); else console.log("Failed!");
 });
-
 ```
 
 *returns*: true/false success for sync write.
@@ -603,7 +637,7 @@ rf24.write(Buffer.from(<data>),function(success){
 
 *throws*: SyntaxError if parameters are invalid.
 
-### Stream(buffer,wr_callback)
+#### stream(buffer,wr_callback)
 Stream has the same semantics of write but it has its differences:
 
 - Stream can send bigger buffers. Up to the size defined in ``stream_maxsize`` parameter of the ``changeWritePipe`` API call.
@@ -614,20 +648,36 @@ Stream has the same semantics of write but it has its differences:
 
 | parameters | description |
 | ---------- | ----------- |
-| buffer     | nodejs buffer with the data. If buffer is bigger than ``stream_maxsize`` the call will not fail but only the ``stream_maxsize`` will be transmitted.
+| buffer     | nodejs buffer with the data. If buffer is bigger than ``stream_maxsize`` the call will not fail but only the ``stream_maxsize`` will be transmitted. |
 | wr_callback | callback function for async write |
 
-wr_callback has the same specification of write function.
+``wr_callback`` has the same specification of write function.
+
+*example*:
+```javascript
+rf24.changeWritePipe(true,2048); // Set max stream size to 2Kb
+var big_buffer=Buffer.from(<data_up_to_2K>);
+rf24.stream(big_buffer,function(success,tx_ok,tx_bytes,tx_req,frame_size,aborted) {
+  if(success) console.log("Stream ok");
+  else {
+    console.log("Transfered:"+tx_bytes+ " total:" + tx_req + " OK->" + tx_ok);
+  }
+});
+```
 
 *returns*: true/false async job successfully created.
 
 *throws*: SyntaxError if parameters are invalid.
 
+#### stopWrite()
+Abort any pending async write. If the transmission has been already started the write will not be aborted, only pending writes.
 
-### stopWrite()
-Abort any pending async write. If a transmission has been aborted
+If write is aborted by the parameter ``abort`` in the write/stream callback functions will be ``true``.
 
-### getStats(*optional* pipe)
+*returns*: Nothing.
+*throws*: Nothing.
+
+#### getStats(*optional* pipe)
 Get internal transfer stats. *#* represents the number of frames received or transmitted.
 
 If pipe is not provided the follwing object is returned:
@@ -648,10 +698,20 @@ rf24.getStats(pipe)
 // => #
 ```
 
-### resetStats(*optional* pipe)
-Set to 0 internal transfer stats. if pipe is not selected all stats will be
+*returns*: number of frames recevied if pipe>1, if pipe=0 or not provided object with the stats.
+
+*throws*: Nothing.
+
+#### resetStats(*optional* pipe)
+Reset to 0 internal transfer stats. if pipe is not selected all stats will be
 cleared.
 
+| parameter | description |
+| ----------| ----------- |
+|  pipe | pipe nr to reset if not set all pipes will be cleared. pipe=0 write pipe |
+
+*returns*: nothing.
+*throws*: nothing.
 
 ## RF24Mesh API
 
@@ -672,7 +732,8 @@ TODO
 - Document Mesh
 - Document Gateway.
 - ~~Get rid off try_abort hack (pending nRF24 lib release)~~
-- Benchmark transfer speeds.
+- ~~Benchmark transfer speeds.~~
+- Implement CPU-friendly streaming (pending nRF24 lib release)
 - ~~Implement IRQ management.~~
 - ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
 - ~~Implement traffic stats~~

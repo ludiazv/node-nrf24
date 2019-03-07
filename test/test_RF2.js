@@ -14,13 +14,18 @@ console.log("RADIO 0\n");
 radio0.begin(true);
 console.log("\n RADIO 1\n");
 radio1.begin(true);
+const IRQ=[27,22];
 
 var config={PALevel:rf.RF24_PA_LOW,
              DataRate:rf.RF24_1MBPS,
              Channel:77};
 
-console.log("CONFIG R0:"+ radio0.config(config));
-console.log("CONFIG R1:"+ radio1.config(config));
+var c0=Object.assign({Irq: IRQ[0]},config);
+var c1=Object.assign({Irq: IRQ[1]},config);
+console.log("CONFIG R0");
+radio0.config(c0,true);
+console.log("CONFIG R1");
+radio1.config(c1,true);
 
 // Open Pipes
 var Pipes=["0x65646f4e31","0x65646f4e32"];
@@ -59,7 +64,7 @@ setInterval(function(){
   var b=Buffer.from("" +it1);
   console.log("R1 Send " + it1 + "[" + radio1.write(b) + "]");
   it1++;
-},2000);
+},2000); 
 
 setInterval(function(){
   console.log("R0->R1 " + (rx[1]/it0)*100 + "% / R1->R0 " + (rx[0]/ it1)*100 +"%");
