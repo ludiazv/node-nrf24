@@ -39,7 +39,7 @@ void nRF24::ReaderWorker::Execute(const RF24AsyncWorker::ExecutionProgress& prog
   }
   */
   // Main control variables
-  std::lock_guard<std::mutex>  one_reader_guard(nRF24::ReaderWorker::one_reader_mutex); // Mutex to control accidental lauch of multiple readers
+  //std::lock_guard<std::mutex>  one_reader_guard(nRF24::ReaderWorker::one_reader_mutex); // Mutex to control accidental lauch of multiple readers
   stopped_=false;             // Stopped flag
   std::set<uint8_t> pipes;    // Pipes set
   int ret;                    // Number of packets received
