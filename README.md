@@ -114,9 +114,12 @@ Enable **nodejs** have basic communication over __nRF24L01(+)__ radios in a simp
 
 ```javascript
 ...
-const nrf24=require("nRF24"); // Load de module
+const nrf24=require("nrf24"); // Load de module
+// or
+import * as nrf24 from 'nrf24'; // Load with import notation notation.
+
 // Init the radio
-var rf24= new nrf24.RF24(<CE gpio>,<CS gpio>);
+var rf24= new nrf24.nRF24(<CE gpio>,<CS gpio>);
 rf24.begin();
 // Configure the radio
 rf24.config({
@@ -230,13 +233,15 @@ for your specific case.
 
 Both parameters are mandatory. Constructor must be called with __new__ keyword to create a new RF24 object, otherwise thiscall will produce an exception.
 
+CE could be any available GPIO , CS pins on the contrary need to be pins that are configured in the kernel as part of the SPI interface.
+
 *Example:*
 ```javascript
 // For RPI
-var rf24=new nrf24.RF24(22,0); // Rpi SPI0 with CE in PIN 15/GPIO 22 and CS0
+var rf24=new nrf24.nRF24(22,0); // Rpi SPI0 with CE in PIN 15/GPIO 22 and CS0
 
 // for SPIDEV
-var rf24=new nrf24.RF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /dev/spidev<a>.<b>
+var rf24=new nrf24.nRF24(6,10); // OrangePi SPI1 CE=PA06 and CS=<a>*10+<b> for /dev/spidev<a>.<b>
 
 ```
 *Returns*: RF24 Object
@@ -249,7 +254,7 @@ Destroy the object __This method must be called__ if its needed to reclaim the m
 *Example:*
 
 ```javascript
-let rf24=new nrf24.RF24(22,0);
+let rf24=new nrf24.nRF24(22,0);
 ...
 // Do radio work
 
@@ -272,7 +277,7 @@ After the creation of the object it is required to call to begin. If begin initi
 *Example:*
 
 ```javascript
-var rf24=new nrf24.RF24(22,0);
+var rf24=new nrf24.nRF24(22,0);
 rf24.begin();
 
 ```
