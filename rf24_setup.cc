@@ -9,7 +9,9 @@ std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
               << " PayloadSize:" << (int)h.PayloadSize << " AddressWidth:" << (int)h.AddressWidth
               << " AutoAck:" << (bool)h.AutoAck
               << " TxDelay:" << h.TxDelay
-              << " PollBaseTime:" << h.PollBaseTime;
+              << " PollBaseTime:" << h.PollBaseTime
+              << " IRQ (negative is unused):" << h.irq
+              << " AutoFailureRecovery:" << h.AutoFailureRecovery;
 }
 
 
@@ -27,6 +29,8 @@ static RF24_conf_t DEFAULT_RF24_CONF={ RF24_PA_MIN ,  //PALevel
                                        true ,         // AutoAck
                                        250,           // TxDelay
                                        RF24_DEFAULT_POLLTIME, // PollBaseTime
+                                       -1,                     // IRQ
+                                       false                   // AutoFailureRecovery        
                                      };
 
 uint32_t  nRF24::_sequencer=0;
@@ -81,6 +85,7 @@ void nRF24::_resetState() {
   sleep_us(1000);
   radio_->flush_tx(); // Make shure transmit buffer is empty
   is_listening_=false;
+  radio_->failureDetected = 0; // clean any failure signal
 }
 
 NAN_METHOD(nRF24::destroy_object) {
@@ -114,27 +119,28 @@ NAN_METHOD(nRF24::New) {
 }
 
 nRF24::nRF24(int ce,int cs) :
-   ce_(ce), cs_(cs),irq_num_(-1),irq_(NULL),
+   ce_(ce), cs_(cs),irq_(NULL),
   radio_(NULL), worker_(NULL),
   current_config(NULL),
-  is_powered_up_(true),is_listening_(false), is_enabled_(true),
-  wpipe_ackmode_(true) , wpipe_maxstream_(1024){
+  is_powered_up_(true),is_listening_(false), is_enabled_(true), failure_stat_(0) {
     for(int i=0;i<6;i++) {
-      used_pipes_[i]=false; // Unused pipes
+      memset(&pipe_conf_[i],0,sizeof(RF24_pipe_configuration_t));
+      pipe_conf_[i].ackmode=true;
+      pipe_conf_[i].stream_info=1;
       memset(&stats_[i],0,sizeof(RF24_stats_t)); // reset stats
       read_buffer_[i].reserve(32);
       read_buffer_[i].clear();
-      max_framemerge_[i]=1; // Default 1 frame merge
     }
+    pipe_conf_[0].stream_info=1024; // patch stream info for pipe 0 to default
   }
 
 // Destructor freeResources
 nRF24::~nRF24() {
+    if(irq_) { irq_->stop(); delete irq_; }
     _stop_write();
     if(worker_) worker_->stop();
     if(radio_) delete radio_;
     if(current_config) delete current_config;
-    if(irq_) delete irq_;
     current_config=NULL;
     radio_=NULL;
     worker_=NULL;
@@ -163,8 +169,9 @@ NAN_METHOD(nRF24::config) {
       if(ObjHas(_obj,"CRCLength")) cc->CRCLength=(uint8_t)ObjGetUInt(_obj,"CRCLength");
       if(ObjHas(_obj,"AutoAck")) cc->AutoAck=(uint8_t)ObjGetBool(_obj,"AutoAck");
       if(ObjHas(_obj,"TxDelay")) cc->TxDelay=ObjGetUInt(_obj,"TxDelay");
-      if(ObjHas(_obj,"Irq")) THIS->irq_num_=(int)ObjGetInt(_obj,"Irq");
+      if(ObjHas(_obj,"Irq")) cc->irq=(int)ObjGetInt(_obj,"Irq");
       if(ObjHas(_obj,"PollBaseTime")) cc->PollBaseTime=ObjGetUInt(_obj,"PollBaseTime");
+      if(ObjHas(_obj,"AutoFailureRecovery")) cc->AutoFailureRecovery=(uint8_t)ObjGetBool(_obj,"AutoFailureRecovery");
       // Validate Fieds and set to default if invalid
 
       if(cc->PALevel>4)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
@@ -213,24 +220,26 @@ void nRF24::_config(bool print_details) {
     if(cc->DataRate==RF24_250KBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 0.765) + 1;
     if(cc->DataRate==RF24_2MBPS) radio_->txDelay = (uint32_t)(radio_->txDelay * 1.82) + 1;
     //Configure the IRQ
-    if(irq_num_>=0) {
-      if(irq_!=NULL) delete irq_;
-      irq_=new RF24Irq(irq_num_);
+    if(cc->irq>=0) {
+      if(irq_!=NULL) {
+          irq_->stop();
+          delete irq_;
+      }
+      irq_=new RF24Irq(cc->irq);
       if(!irq_->begin(RF24Irq::DIR_INPUT,RF24Irq::EDGE_FALLING)) {
         delete irq_;
         irq_=NULL;
-        irq_num_=-1; // Fallback to pooling
+        cc->irq=-1; // Fallback to pooling
       } else {
         irq_->clear();
         radio_->maskIRQ(0,0,0); // No mask any interrupt
       }
     }  
-    wpipe_ackmode_=cc->AutoAck;
+    pipe_conf_[0].ackmode=cc->AutoAck; // set mode to write pipe the default
     if(print_details) {
         std::cout << "Radio details after config:" << std::endl;
         std::cout << "===========================" << std::endl;
         radio_->printDetails();
-        std::cout << "IRQ gpio (negative if disabled):" << irq_num_<< "("<< irq_ << ")" << std::endl;
         std::cout << "Config internals:" << std::endl;
         std::cout << "check the values as incorrect values fallback to default values." << std::endl;
         std::cout << *cc << std::endl;
@@ -253,7 +262,7 @@ NAN_METHOD(nRF24::useWritePipe) {
   auto THIS=MTHIS(nRF24);
   v8::Local<v8::String> addr;
   std::string error;
-  uint8_t addrc[6]; addrc[5]='\0';
+  uint8_t addrc[6];
   bool auto_ack;
 
   if(info.Length() >=1 ) { // only one argument
@@ -262,6 +271,7 @@ NAN_METHOD(nRF24::useWritePipe) {
       {
           RF24_conf_t *cc=THIS->_get_config();
           auto_ack=cc->AutoAck;
+          memset(addrc,0,6); // Clear addr.
           if(!ConvertHexAddress(addr,addrc,cc->AddressWidth)) return Nan::ThrowSyntaxError("Invalid address");
           if(info.Length()>=2 && info[1]->IsBoolean()) auto_ack=info[1]->BooleanValue();
           MRET(THIS->_useWritePipe(addrc,auto_ack));
@@ -279,9 +289,10 @@ bool nRF24::_useWritePipe(uint8_t *pipe_name,bool auto_ack){
   //try_and_catch_abort([&]() -> void {
           radio_->openWritingPipe(pipe_name);
           radio_->setAutoAck(0,auto_ack);
-          wpipe_ackmode_=auto_ack;
-          wpipe_maxstream_=1024;
-          res=used_pipes_[0]=true;
+          memcpy(pipe_conf_[0].addr,pipe_name,5); // Copy address
+          pipe_conf_[0].ackmode=auto_ack;
+          pipe_conf_[0].stream_info=1024; // reset stream info
+          res=pipe_conf_[0].in_use=true;
   //});
   }catch(const std::exception& e){
       NRF24DBG(std::cout << "Exception _useWritePipe " << e.what() << std::endl);
@@ -313,9 +324,9 @@ bool nRF24::_changeWritePipe(bool auto_ack,uint16_t mm){
   //try_and_catch_abort([&]() -> void {
 
           radio_->setAutoAck(0,auto_ack);
-          wpipe_ackmode_=auto_ack;
-          wpipe_maxstream_=mm;
-          res=used_pipes_[0]=true;
+          pipe_conf_[0].ackmode=auto_ack;
+          pipe_conf_[0].stream_info=mm; // reset stream info
+          res=pipe_conf_[0].in_use=true;
   //});
   }catch(const std::exception& e){
       NRF24DBG(std::cout << "Exception _changeWritePipe " << e.what() << std::endl);
@@ -350,7 +361,7 @@ NAN_METHOD(nRF24::addReadPipe) {
 int32_t nRF24::_addReadPipe(uint8_t *pipe_name,bool auto_ack) {
    int i=1;
    if(!is_enabled_ || radio_==NULL) return -1;
-   while(used_pipes_[i] && i<6) i++;
+   while(pipe_conf_[i].in_use && i<6) i++;
 
    if(i<6 && i>0) {
      try {
@@ -360,8 +371,10 @@ int32_t nRF24::_addReadPipe(uint8_t *pipe_name,bool auto_ack) {
               radio_->setAutoAck((uint8_t)i,auto_ack);
               read_buffer_[i].reserve(32); // Reserve buffer
               read_buffer_[i].clear();
-              max_framemerge_[i]=1;
-              used_pipes_[i]=true;
+              memcpy(pipe_conf_[i].addr,pipe_name,5); // Save addr.
+              pipe_conf_[i].stream_info=1; // Reset max stream to default
+              pipe_conf_[i].ackmode=auto_ack;
+              pipe_conf_[i].in_use=true;
       //});
       }catch(const std::exception& e){
           NRF24DBG(std::cout << "Exception _addReadPipe " << e.what() << std::endl);
@@ -391,7 +404,7 @@ NAN_METHOD(nRF24::changeReadPipe) {
 }
 
 bool nRF24::_changeReadPipe(int32_t number,bool auto_ack,uint16_t maxmerge){
-  if(!is_enabled_ || radio_==NULL || number<1 || number>5 || !used_pipes_[number]) return false;
+  if(!is_enabled_ || radio_==NULL || number<1 || number>5 || !pipe_conf_[number].in_use) return false;
   bool res=false;
   RF24_conf_t *cc=this->_get_config();
   size_t reserve=cc->PayloadSize * maxmerge;
@@ -401,7 +414,8 @@ bool nRF24::_changeReadPipe(int32_t number,bool auto_ack,uint16_t maxmerge){
         radio_->setAutoAck(number,auto_ack);
         read_buffer_[number].reserve(reserve); // Reserve buffer
         read_buffer_[number].clear();
-        max_framemerge_[number]=maxmerge;
+        pipe_conf_[number].ackmode=auto_ack; // chang ack mode
+        pipe_conf_[number].stream_info=maxmerge; // change max merge
         res=true;
   //});
   }catch(const std::exception& e){
@@ -432,10 +446,10 @@ void nRF24::_removeReadPipe(int32_t number){
             radio_->closeReadingPipe((uint8_t)number);
             read_buffer_[number].reserve(32);
             read_buffer_[number].clear();
-            used_pipes_[number]=false;
+            pipe_conf_[number].in_use=false;
     //});
 
-    for(int i=1;i<6;i++) all_closed=all_closed && !used_pipes_[i];
+    for(int i=1;i<6;i++) all_closed=all_closed && !pipe_conf_[i].in_use;
 
     } catch(const std::exception& e){
         NRF24DBG(std::cout << "Exception _removeReadPipe " << e.what() << std::endl);
@@ -445,6 +459,50 @@ void nRF24::_removeReadPipe(int32_t number){
 
     if(all_closed)  _stop_read();
 }
+
+/* Failure management */
+
+NAN_METHOD(nRF24::hasFailure) {
+  auto THIS=MTHIS(nRF24);
+  MRET(THIS->_hasFailure());
+}
+
+bool nRF24::_hasFailure() {
+  if(!is_enabled_ || radio_==NULL) return false;
+  std::lock_guard<std::mutex> guard(radio_mutex); // radio lock
+  return radio_->failureDetected > 0;
+}
+NAN_METHOD(nRF24::restart) {
+  auto THIS=MTHIS(nRF24);
+  THIS->_restart();
+}
+
+void nRF24::_restart(){
+
+    if(radio_!=NULL || radio_->failureDetected == 0) return;
+    std::lock_guard<std::mutex> guard2(radio_write_mutex); // write lock avoid any write during recover
+    bool wpack=pipe_conf_[0].ackmode; // back up write pipe ackmode that is reseted by configure.
+    _begin(false); // Restart radio 
+    _config(false); // Reconfigure radio
+    pipe_conf_[0].ackmode=wpack;
+    // Exclusion block for pipes adjustment
+    {
+      std::lock_guard<std::mutex> guard(radio_mutex);
+      // Restore write pipe configuration
+      if(pipe_conf_[0].in_use) {
+         radio_->openWritingPipe(pipe_conf_[0].addr);
+         radio_->setAutoAck(0,wpack);
+      }
+      // Restore reading pipes
+      for(int i=1;i<6;i++) {
+        if(pipe_conf_[i].in_use) {
+          radio_->openReadingPipe(i,pipe_conf_[i].addr); // restore address
+          radio_->setAutoAck(i,pipe_conf_[0].ackmode); // resore ack mode
+        } else radio_->closeReadingPipe(i); // not in use make sure is closed
+      }
+    }
+}
+
 
 /* Common functions */
 bool nRF24::_present() {

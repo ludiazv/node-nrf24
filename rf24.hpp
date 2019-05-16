@@ -23,6 +23,8 @@ typedef struct RF24_conf {
   // Extended options
   uint32_t   TxDelay;
   useconds_t PollBaseTime;
+  int16_t    irq;
+  bool       AutoFailureRecovery;
 
 } RF24_conf_t;
 
@@ -128,6 +130,8 @@ class nRF24 : public Nan::ObjectWrap {
       Nan::SetPrototypeMethod(tpl, "addReadPipe",addReadPipe);
       Nan::SetPrototypeMethod(tpl, "changeReadPipe",changeReadPipe);
       Nan::SetPrototypeMethod(tpl, "removeReadPipe",removeReadPipe);
+      Nan::SetPrototypeMethod(tpl, "hasFailure",hasFailure);
+      Nan::SetPrototypeMethod(tpl, "restart",restart);
       Nan::SetPrototypeMethod(tpl, "present",present);
       Nan::SetPrototypeMethod(tpl, "isP",isP);
       Nan::SetPrototypeMethod(tpl, "powerUp",powerUp);
@@ -154,7 +158,8 @@ class nRF24 : public Nan::ObjectWrap {
       NANCONSTI("RF24_CRC_8",RF24_CRC_8);
       NANCONSTI("RF24_CRC_16",RF24_CRC_16);
       NANCONSTI("RF24_MAX_MERGE",RF24_MAX_MERGEFRAMES);
-      NANCONSTI("RF24RF24_MIN_POLLTIME",RF24_MIN_POLLTIME);
+      NANCONSTI("RF24_MIN_POLLTIME",RF24_MIN_POLLTIME);
+      NANCONSTI("RF24_FAILURE_STAT",7);
   }
 
   bool _begin(bool print_details=false); // Start the radio
@@ -170,6 +175,8 @@ class nRF24 : public Nan::ObjectWrap {
   bool _changeWritePipe(bool auto_ack,uint16_t mm);
   int32_t _addReadPipe(uint8_t *pipe_name,bool auto_ack=true);
   void    _removeReadPipe(int32_t number);
+  bool _hasFailure();
+  void _restart();
   bool _changeReadPipe(int32_t number,bool auto_ack,uint16_t maxmerge);
   bool _powerUp();
   bool _powerDown();
@@ -190,7 +197,7 @@ class nRF24 : public Nan::ObjectWrap {
   inline bool        _has_config() {return current_config!=NULL ; }
   inline RF24*       _get_radio() {return radio_; }
   inline void        _get_cecs(int& ce,int& cs) { ce=ce_; cs=cs_; }
-  inline int         _get_irq_num() { return irq_num_; }
+  inline int         _get_irq_num() { return  _get_config()->irq; }
   inline useconds_t  _get_polltime() { return _get_config()->PollBaseTime; }
   inline void        _enable(bool e=true) { is_enabled_ = e; } // enable disable.
   inline bool        _use_irq() { return irq_!=NULL; }
@@ -223,6 +230,8 @@ class nRF24 : public Nan::ObjectWrap {
   static NAN_METHOD(addReadPipe);
   static NAN_METHOD(removeReadPipe);
   static NAN_METHOD(changeReadPipe);
+  static NAN_METHOD(hasFailure);
+  static NAN_METHOD(restart);
   static NAN_METHOD(getStats);
   static NAN_METHOD(resetStats);
 
@@ -241,9 +250,15 @@ class nRF24 : public Nan::ObjectWrap {
     }
   }
 
+  struct RF24_pipe_configuration_t {
+     bool       in_use;
+     uint8_t    addr[5];
+     bool       ackmode;
+     uint16_t   stream_info;     // maxtream for write pipe , max merge for reading pipe
+  };
 
   // Class attributtes
-  int ce_,cs_,irq_num_;   // CE, CS & IRQ lines
+  int ce_,cs_;   // CE, CS
   RF24Irq *irq_;          ///<Irq object
   std::mutex radio_mutex,radio_write_mutex,write_abort_mutex,write_queue_mutex; // Coordination mutex
   RF24 *radio_;   // RADIO
@@ -252,11 +267,9 @@ class nRF24 : public Nan::ObjectWrap {
   volatile bool is_powered_up_; // Control flags
   volatile bool is_listening_;
   volatile bool is_enabled_;
-  bool          wpipe_ackmode_;      // wpipe in AutoACK mode?
-  uint16_t      wpipe_maxstream_;    // wpipe max stream allowed.
-  bool          used_pipes_[6];      // Pipe used flags
-  uint16_t      max_framemerge_[6];  // max_framemerge_
+  RF24_pipe_configuration_t pipe_conf_[6];  // status of pipes configuration 
   RF24_stats_t  stats_[6];           // Stats for pipes
+  uint32_t      failure_stat_;        // Failure counter
   std::vector<uint8_t> read_buffer_[6]; // Reading buffer for every pipe
   std::queue<nRF24::WriterWorker *>  write_queue_; // Writing queue workers
 
@@ -270,3 +283,4 @@ class nRF24 : public Nan::ObjectWrap {
 };
 
 #endif
+

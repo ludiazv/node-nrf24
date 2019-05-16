@@ -32,6 +32,7 @@ NAN_METHOD(nRF24::getStats) {
   Nan::Set(o,Nan::New("TotalTx_Ok").ToLocalChecked(),Nan::New(THIS->stats_[0].snd));
   Nan::Set(o,Nan::New("TotalTx_Err").ToLocalChecked(),Nan::New(THIS->stats_[0].sndError));
   Nan::Set(o,Nan::New("PipesRx").ToLocalChecked(),a);
+  Nan::Set(o,Nan::New("Failures").ToLocalChecked(),Nan::New(THIS->failure_stat_));
   MRET(o);
 
 }
@@ -42,6 +43,10 @@ NAN_METHOD(nRF24::resetStats) {
   if(info.Length()>=1 && info[0]->IsUint32()) {
     auto pipe=info[0]->Uint32Value();
     if(/*pipe>=0 && */pipe<=5) memset(&THIS->stats_[pipe],0,sizeof(RF24_stats_t));
-  } else memset(&THIS->stats_[0],0,sizeof(RF24_stats_t)*6); // Clear all
+    else THIS->failure_stat_=0;
+  } else {
+    memset(&THIS->stats_[0],0,sizeof(RF24_stats_t)*6); // Clear all
+    THIS->failure_stat_=0;
+  }
 
 }

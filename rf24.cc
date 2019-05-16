@@ -72,7 +72,7 @@ int nRF24::_read_buffered(std::set<uint8_t> &pending,bool &more_available){
          radio_->read(&frame,cc->PayloadSize); // Read the frame
          // Buffer the frame
          read_buffer_[pipe].insert(read_buffer_[pipe].end(),frame,frame+cc->PayloadSize);
-         no_maxlen= (read_buffer_[pipe].size() < (max_framemerge_[pipe]*cc->PayloadSize)); // Reached max merge
+         no_maxlen= (read_buffer_[pipe].size() < ((pipe_conf_[pipe].stream_info)*cc->PayloadSize)); // Reached max merge
          ret++;
          pending.insert(pipe);
          stats_[pipe].rcv++; // Colect stats
@@ -134,7 +134,7 @@ NAN_METHOD(nRF24::stream){
      .Argument(0).IsBuffer().Bind(buffer)
      .Argument(1).IsFunction().Bind(_callback).Error(&error)) {
        size_t size= node::Buffer::Length(buffer);
-       size= (size > THIS->wpipe_maxstream_) ? THIS->wpipe_maxstream_ : size;
+       size= (size > THIS->pipe_conf_[0].stream_info) ? THIS->pipe_conf_[0].stream_info : size; // Crop to steam max size
        Nan::Callback *callback = new Nan::Callback(_callback);
        if(callback!=NULL)
           MRET(THIS->addWriterWorker(callback,node::Buffer::Data(buffer),size));
@@ -169,7 +169,7 @@ int nRF24::_write(void *data,size_t r_length,size_t n_packets, size_t p_size){
                  ares= radio_->writeFast( (uint8_t*)data+(p_size*i) , p_size );
                  i++;
                  // if no ACK dont hold the radio tx more than 4ms (hw requirement)
-                 if(!wpipe_ackmode_ && m_end(&pause) > 3150){
+                 if(!pipe_conf_[0].ackmode && m_end(&pause) > 3150){
                    m_start(&pause);
                    radio_->txStandBy(); // Wait to finish pending transfer.
                  }
@@ -190,6 +190,7 @@ int nRF24::_write(void *data,size_t r_length,size_t n_packets, size_t p_size){
                 }
              }
       //});
+      
      }
     }catch(const std::exception& e) {
       NRF24DBG(std::cout << "Exeception write_ " << e.what() << std::endl);
@@ -197,6 +198,14 @@ int nRF24::_write(void *data,size_t r_length,size_t n_packets, size_t p_size){
       std::cout << "Exeception write_ ..."<< std::endl;
     }
     if(worker_!=NULL) worker_->no_want_write();
+
+    if(ret==0) {
+      if(radio_->failureDetected >0 ) {
+          failure_stat_++;
+          auto cc=_get_config();
+          if(cc!=NULL && cc->AutoFailureRecovery) _restart();
+      }
+    }
 
     return ret;
 }
