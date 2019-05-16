@@ -28,7 +28,7 @@ console.log("CONFIG R1");
 radio1.config(c1,true);
 
 // Open Pipes
-var Pipes=["0x65646f4e31","0x65646f4e32"];
+var Pipes=["0x65646f4e41","0x65646f4e42","0x65646f4e43","0x65646f4e44"];
 //var rPipes=["0x72646f4e31","0x72646f4e32"];
 
 // Two-way binding
@@ -36,6 +36,9 @@ radio0.useWritePipe(Pipes[1]);
 radio1.useWritePipe(Pipes[0]);
 radio0.addReadPipe(Pipes[0],true);
 radio1.addReadPipe(Pipes[1],true);
+radio0.addReadPipe(Pipes[2],false);
+radio1.addReadPipe(Pipes[3],false);
+
 
 
 var it0=0,rx=[0,0];
@@ -56,12 +59,14 @@ radio1.read(readFactory(1),function(){});
 
 setInterval(function(){
   var b=Buffer.from("" + it0);
+  if((it0 % 2) == 0) radio0.useWritePipe(Pipes[1],true); else radio0.useWritePipe(Pipes[3],false);
   console.log("R0 Send " + it0 + "[" + radio0.write(b) + "]");
   it0++;
 },1000);
 
 setInterval(function(){
   var b=Buffer.from("" +it1);
+  if((it1 % 2) == 0) radio1.useWritePipe(Pipes[0],true); else radio1.useWritePipe(Pipes[2],false);
   console.log("R1 Send " + it1 + "[" + radio1.write(b) + "]");
   it1++;
 },2000); 
