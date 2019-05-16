@@ -189,19 +189,23 @@ rf24.stream(big_buffer,function(success,tx_ok,tx_bytes,tx_req,frame_size,aborted
 
 Receiving streaming data:
 
-Receiving streaming data do not require special function. ``read()``function will receive the incoming frames. To improve perfomance 
+Receiving streaming data do not require special function. ``read()``function will receive the incoming frames. To improve perfomance incoming frames from the transmitter can be merged into a single buffer. The library will try to merge incoming frames and send then to the ```read() callback``` but is not guarteed that frames will be merged. User can configure maximun frames that are possible to merge by calling ```changeReadPipe()```
 
 ```javascript
 rf24.changeReadPipe(pipenr,false,10); // Wil merge up to 10 frames with out 
 
 ```
 
-
 ### Peformance
 
-Starting form version 1.0-beta the improvement of perfomance is significant. To archive beter 
+Starting form version 1.0-beta the improvement of perfomance is significant. To archive beter maximun performance **IRQ** line must be configured.
 
-Check this [this](PERFORMACE.md) page to check a baseline performed that can be archived with the library.
+Check this [this](https://github.com/ludiazv/node-nrf24/blob/master/PERFORMANCE.md) page to check a baseline performed that can be archived with the library.
+
+### Failure handling
+Due to wrong wiring / weak signal quality or faulty hardware the module can detect when the radio is in a inconsistent status and is not able to transmit. User can check via ```hasFailure()``` API if this condition has been detected. Recovery of this situation could require to change wiring or improve power/decoupling for the radio module or simply change the radio module. 
+
+__experimental__: Recovery of faulty hardware is supported in a experimental way by reseting the radio. If a radio is failing randomly but it perform well the user can call ```restart()``` API to reset the radio. All configuration will be restarted acording to user. Faliures can be only detected after writing.
 
 ### RF24Mesh
 
@@ -212,6 +216,7 @@ TODO documentation
 
 TODO documentation
 ....
+
 
 ## API
 
@@ -592,7 +597,7 @@ Changes write pipe configuration. This API **must** be called after ``useWritePi
 | auto_ack  | true/false nRF24 support to wait to ACK from the transmitter by the hardware |
 | stream_maxsize | Maximum size in bytes of buffer in stream mode.
 
-The maximum buffer is reset to a default value of ``1204``bytes after calling to ``useWritePipe`` so to change it this function must be called every time the writting pipe is changed. Note also that the ``write()`` function ignores the parameter ``stream_maxsize`` and it will be only applicable using the ``stream()`` API (see below).
+The maximum buffer is reset to a default value of ``1204`` bytes after calling to ``useWritePipe`` so to change it this function must be called every time the writting pipe is changed. Note also that the ``write()`` function ignores the parameter ``stream_maxsize`` and it will be only applicable using the ``stream()`` API (see below).
 
 *returns*: Nothing
 
@@ -682,13 +687,19 @@ If write is aborted by the parameter ``abort`` in the write/stream callback func
 *returns*: Nothing.
 *throws*: Nothing.
 
+#### hasFailure()
+Get a boolenan indicator if failure has been detected in the radio.
+
+*returns*: true/false 
+*throws*: Nothing
+
 #### getStats(*optional* pipe)
 Get internal transfer stats. *#* represents the number of frames received or transmitted.
 
 If pipe is not provided the follwing object is returned:
 ```javascript
 rf24.getStats();
-// => { TotalRx: # , TotalTx_Ok: # , TotalTx_Err: # , PipesRx:[#,#,...]}
+// => { TotalRx: # , TotalTx_Ok: # , TotalTx_Err: # , PipesRx:[#,#,...] , Failure: # }
 
 ```
 
@@ -713,7 +724,7 @@ cleared.
 
 | parameter | description |
 | ----------| ----------- |
-|  pipe | pipe nr to reset if not set all pipes will be cleared. pipe=0 write pipe |
+|  pipe | pipe nr to reset if not set all pipes will be cleared. pipe=0 write pipe / pipe=RF24_FAILURE_STAT reset failure counter  |
 
 *returns*: nothing.
 *throws*: nothing.
@@ -729,6 +740,9 @@ TODO
 
 # TODO
 
+- ~~Assure RF24Lib is built with FAILURE_HANDLING~~
+- Implement FAILURE_HANDLING auto-recovery.
+- ~~Implement FAILURE stats.~~
 - ~~Test bindings~~
 - ~~Migrate to NAN >2.8 to support queued async msg passing.~~
 - ~~Implement setWriteAck for write pipe.~~
@@ -745,6 +759,13 @@ TODO
 
 # Change log
 
+- v0.1.1-beta
+  - Documentation improvements
+  - Compilation of RFLibs to specific releases to assure stability
+  - Force compilitation of RF24Lib with FAILURE_HANDLING activated.
+  - Refactor IRQ management
+  - Added new Api ```hasFailure```
+  - ```getStats``` & ```resetStats``` report failure detection stats.
 - v0.1.0-beta
   - Documentation improvements.
   - Make nrf24 objects persistent with Ref(). Added destroy() method to Unref() and free object.
