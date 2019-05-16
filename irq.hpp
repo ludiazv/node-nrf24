@@ -12,6 +12,7 @@ class RF24Irq {
   bool    configure(const char* mode,const char *edge);
   void    clear();
   int     wait(bool clear=true,uint32_t timeout=200);
+  void    stop();
   inline  uint8_t get() { return val; }
 
   static void un_export(uint32_t p);
@@ -24,10 +25,9 @@ class RF24Irq {
 
   private:
     uint32_t pin;
-    int fd;
+    int fd , efd;
     uint8_t val;
-    struct pollfd pfd;
-
+    struct pollfd pfd[2];
     void unexport();
 
 };

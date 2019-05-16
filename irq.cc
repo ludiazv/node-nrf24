@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/eventfd.h>
 #include "rf24_util.hpp"
 
 #define GPIO_PATH "/sys/class/gpio/"
@@ -17,15 +18,27 @@ const char *RF24Irq::EDGE_RISING="rising";
 const char *RF24Irq::EDGE_FALLING="falling";
 const char *RF24Irq::EDGE_NONE="none";
 
-RF24Irq::RF24Irq(uint32_t _pin) : pin(_pin), fd(-1) , val(0xFF) {
+RF24Irq::RF24Irq(uint32_t _pin) : pin(_pin), fd(-1), efd(-1) , val(0xFF) {
 
 }
 
 RF24Irq::~RF24Irq() {
   // close the fd if needed
   if(fd!=-1) close(fd);
+  if(efd!=-1) close(efd);
   // Unexport needed
   unexport();
+}
+void RF24Irq::stop() {
+  uint64_t dummy=1;
+  // clear interrupt 
+  if(efd!=-1) {
+    write(efd,&dummy,sizeof(uint64_t)); // notify custom event
+  }
+  if(fd!=-1) {
+    close(fd);
+    fd=-1;
+  }
 }
 
 void RF24Irq::un_export(uint32_t p) {
@@ -133,9 +146,16 @@ bool RF24Irq::begin(const char *mode,const char *edge){
     unexport();
     return false;
   }
+  efd=eventfd(0,0); // create dummy file descripto for close envent
+  if(efd==-1) {
+    unexport();
+    return false;
+  }
   memset(&pfd,0,sizeof(pfd));
-  pfd.fd=fd;
-  pfd.events= POLLPRI | POLLERR;
+  pfd[0].fd=fd;
+  pfd[0].events= POLLPRI | POLLERR;
+  pfd[1].fd=efd;
+  pfd[1].events= POLLIN | POLLERR;
 
   // Clean input.
   if(strcmp(mode,"in")==0) {
@@ -148,17 +168,22 @@ bool RF24Irq::begin(const char *mode,const char *edge){
 }
 
 int  RF24Irq::wait(bool cl,uint32_t timeout){
-  if( fd==-1) return -2;
+  if( fd==-1 || efd ==-1 ) return -2;
 
    if(cl) clear();
    //lseek(fd, 0, SEEK_SET);
    //clear();
-   int ret=poll(&pfd,1,timeout);
+   int ret=poll(&pfd[0],2,timeout);
    if( ret >0 ) {
-        // IRQ Received.
+        // IRQ or close event received Received.
         clear();
-        if(pfd.revents & POLLPRI) return 1;
-        if(pfd.revents & POLLERR) ret=-1;
+        if(pfd[0].revents & POLLPRI) return 1;
+        if(pfd[1].revents & POLLIN) {
+          uint64_t dummy;
+          read(efd,&dummy,sizeof(uint64_t));
+          ret=0; // return as timeout
+        }
+        if((pfd[0].revents & POLLERR) || (pfd[1].revents & POLLERR)) ret=-1;
    } else if (ret < 0) ret--; // -2 is call error;
    return ret;
 
