@@ -746,6 +746,7 @@ TODO
 - ~~Test bindings~~
 - ~~Migrate to NAN >2.8 to support queued async msg passing.~~
 - ~~Implement setWriteAck for write pipe.~~
+- Change build script to not install globally the libraries (.so) in the system and link them locally inside the package (rpath)
 - Implement MeshStats and non blocking behavior for begin,nodeID and Send.
 - Remove try_abort hack on mesh and gateway
 - Document Mesh
