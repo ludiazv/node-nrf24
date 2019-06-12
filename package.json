@@ -1,6 +1,6 @@
 {
   "name": "nrf24",
-  "version": "0.1.1-beta",
+  "version": "0.1.2-beta",
   "description": "nRF24 (nrf24l01/nrfl24l01+) radios in the nodejs way",
   "main": "index.js",
   "scripts": {
