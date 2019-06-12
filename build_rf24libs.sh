@@ -4,7 +4,7 @@ ALTGIT=https://github.com/ludiazv
 
 RF24_VERSION="v1.3.2"
 RF24N_VERSION="v1.0.9"
-RF24M_VERSION="v1.0.6"
+RF24M_VERSION="v1.0.7"
 RF24G_VERSION="TODO"
 
 #Libraries are allways rebuild as they require FAILURE_HANDLING enabled to operate

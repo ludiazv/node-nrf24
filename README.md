@@ -198,7 +198,7 @@ rf24.changeReadPipe(pipenr,false,10); // Wil merge up to 10 frames with out
 
 ### Peformance
 
-Starting form version 1.0-beta the improvement of perfomance is significant. To archive beter maximun performance **IRQ** line must be configured.
+Starting form version 1.0-beta the improvement of perfomance is significant. To archive better maximun performance **IRQ** line must be configured.
 
 Check this [this](https://github.com/ludiazv/node-nrf24/blob/master/PERFORMANCE.md) page to check a baseline performed that can be archived with the library.
 
@@ -748,7 +748,8 @@ TODO
 - ~~Implement setWriteAck for write pipe.~~
 - Change build script to not install globally the libraries (.so) in the system and link them locally inside the package (rpath)
 - Implement MeshStats and non blocking behavior for begin,nodeID and Send.
-- Remove try_abort hack on mesh and gateway
+- Remove try_abort hack on mesh and gateway.
+- Refactor Mesh for async only API
 - Document Mesh
 - Document Gateway.
 - ~~Get rid off try_abort hack (pending nRF24 lib release)~~
@@ -760,11 +761,13 @@ TODO
 
 # Change log
 
+- v0.1.2-beta
+  - Bump to version of mesh library to 1.0.7 (#12)
 - v0.1.1-beta
   - Documentation improvements
   - Compilation of RFLibs to specific releases to assure stability
   - Force compilitation of RF24Lib with FAILURE_HANDLING activated.
-  - Refactor IRQ management
+  - Refactor IRQ management.
   - Added new Api ```hasFailure```
   - ```getStats``` & ```resetStats``` report failure detection stats.
 - v0.1.0-beta
