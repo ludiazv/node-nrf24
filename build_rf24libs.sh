@@ -89,17 +89,16 @@ cd ..
 rm -rf RF24Mesh
 echo "==> RF24Mesh installed / cleaned"
 
-# Do not build gateway until functional release
-#echo "=>RF24Gateway..."
-#if [ -d RF24Gateway ] ; then
-#cd RF24Gateway; git pull ; cd ..
-#else
-#git clone $RF24GIT/RF24Gateway.git RF24Gateway
-#fi
-#cd RF24Gateway
-#make
-#sudo make install
-#cd ..
+echo "=>RF24Gateway..."
+if [ -d RF24Gateway ] ; then
+cd RF24Gateway; git pull ; cd ..
+else
+git clone $RF24GIT/RF24Gateway.git RF24Gateway
+fi
+cd RF24Gateway
+make
+sudo make install
+cd ..
 
 cd ..
 rm -fr rf24libs
