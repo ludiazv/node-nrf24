@@ -688,10 +688,17 @@ If write is aborted by the parameter ``abort`` in the write/stream callback func
 *throws*: Nothing.
 
 #### hasFailure()
-Get a boolenan indicator if failure has been detected in the radio.
+Get a boolenan indicator if failure has been detected in the radio. (**This is experimental feautre**)
 
 *returns*: true/false 
 *throws*: Nothing
+
+### restart()
+Reinit the radio maintaining the configuration and open pipes. Calling this funcion after detecting a failure can reset the de radio
+and enable graceful recovery of comunications. (**This is experimental feature**)
+
+*returns*: nothing
+*throws*: nothing
 
 #### getStats(*optional* pipe)
 Get internal transfer stats. *#* represents the number of frames received or transmitted.
@@ -741,12 +748,12 @@ TODO
 # TODO
 
 - ~~Assure RF24Lib is built with FAILURE_HANDLING~~
-- Implement FAILURE_HANDLING auto-recovery.
+- ~~Implement FAILURE_HANDLING auto-recovery.~~
 - ~~Implement FAILURE stats.~~
 - ~~Test bindings~~
 - ~~Migrate to NAN >2.8 to support queued async msg passing.~~
 - ~~Implement setWriteAck for write pipe.~~
-- Change build script to not install globally the libraries (.so) in the system and link them locally inside the package (rpath)
+- ~~Change build script to not install globally the libraries (.so) in the system and link them locally inside the package (rpath)~~
 - Implement MeshStats and non blocking behavior for begin,nodeID and Send.
 - Remove try_abort hack on mesh and gateway.
 - Refactor Mesh for async only API
@@ -758,9 +765,19 @@ TODO
 - ~~Implement IRQ management.~~
 - ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
 - ~~Implement traffic stats~~
+- Update base RF24 library to new verions (1.3.3 & 1.3.4 do not work)
 
 # Change log
 
+- v0.1.5-beta
+  - Now RFLibs are linked statically avoiding to install library system-wide.
+  - Improved documentation + added experimatal support for autoRecovery.
+  - Now the library is compatible and tested with node lts versions: 8 , 10 , 12
+  - Added travis automatic build to test compilation in all supported node versions.
+  - Fixes in v8 data conversion using isolates and Nan helpers.
+  - As nan-marshal is not updated the module do not depend on this module anymore: Nan-marshal code is include with the project as a header file and has been adpated to have compativility with node 10 and 12.
+- v0.1.4-beta
+  - Fix build pull request #14
 - v0.1.2-beta
   - Bump to version of mesh library to 1.0.7 (#12)
 - v0.1.1-beta
