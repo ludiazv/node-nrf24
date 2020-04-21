@@ -1,5 +1,11 @@
 dist: xenial
 language: minimal
+addons:
+    apt:
+      packages:
+        - qemu
+        - qemu-user-static
+        - binfmt-support
 services:
     - docker
 env:
