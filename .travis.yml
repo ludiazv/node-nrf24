@@ -1,11 +1,11 @@
 dist: xenial
 language: minimal
-addons:
-    apt:
-      packages:
-        - qemu
-        - qemu-user-static
-        - binfmt-support
+#addons:
+#    apt:
+#      packages:
+#        - qemu
+#        - qemu-user-static
+#        - binfmt-support
 services:
     - docker
 env:
@@ -17,4 +17,5 @@ install: skip
 #before_script: docker run --rm --privileged multiarch/qemu-user-static:register
 script:
     - docker run --rm --privileged multiarch/qemu-user-static:register --reset 
-    - ./docker_build.sh $NODE_VERSION
+    - docker run -t $NODE_VERSION node --version
+    #   - ./docker_build.sh $NODE_VERSION
