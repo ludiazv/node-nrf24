@@ -18,7 +18,7 @@ if(!ready) {
   process.exit(1);
 }
 
-var config={PALevel:rf.RF24_PA_MAX,
+var config={PALevel:rf.RF24_PA_LOW,
             DataRate:rf.RF24_1MBPS,
             Channel:76,
             AutoAck:true,
@@ -73,7 +73,7 @@ function snd(do_sync) {
       process.stdout.write(" | response received |")
       let ret=d[0].data.readUInt32LE(0);
       if( ret == tmstp) process.stdout.write(" reponse matchs ");
-      else process.stdout.write(" response does not match ");
+      else process.stdout.write(" response does not match "+ ret + " != " + tmstp);
       console.log("| roundtrip took", (t[1] /1000).toFixed(0)," us");
     }
   },function(){ console.log("STOPPED!"); });
