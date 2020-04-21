@@ -11,7 +11,7 @@ docker run -t --rm -v $(pwd):/root/node-nrf24 \
            --workdir /root/node-nrf24 \
            $DOCKER_NODE \
 #           /bin/bash -c "npm install node-gyp -g && ./build_rf24libs.sh && node-gyp rebuild"
-            /bin/bash -c "ls"
+            /bin/bash -c "node --version"
             
 echo "Finished with: $?"
 echo "done!" 
