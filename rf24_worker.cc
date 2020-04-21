@@ -150,7 +150,7 @@ void nRF24::ReaderWorker::HandleProgressCallback(const RF24AsyncType *data, size
 
   v8::Local<v8::Value> argv[] ={
     arr,
-    Nan::New(size)
+    Nan::New((uint32_t)size)
   };
 
   progress->Call(2, argv,this->async_resource);
