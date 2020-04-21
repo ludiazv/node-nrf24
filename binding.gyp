@@ -14,17 +14,14 @@
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "<!(node -e \"require('nan-check')\")",
-        "<!(node -e \"require('nan-marshal')\")",
-        "/usr/local/include/RF24",
-        "/usr/local/include/RF24Network",
-        "/usr/local/include/RF24Mesh",
-        "/usr/local/include/RF24Gateway"
+        "nan-lib",
+        "rf24libs/include"
       ],
       'defines': [
 
       ],
       'link_settings': {
-        'libraries': ['-lrf24 -lrf24network -lrf24mesh -lrf24gateway'],
+        'libraries': ['-L<(module_root_dir)/rf24libs','-lrf24 -lrf24net -lrf24mesh'],
       }
     }
   ]

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "preinstall": "./build_rf24libs.sh",
-    "install": "node-gyp rebuild"
+    "install": "node-gyp rebuild",
+    "postinstall": "rm -rf rf24libs"
   },
   "repository": {
     "type": "git",
