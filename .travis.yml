@@ -8,5 +8,5 @@ env:
     - NODE_VERSION=arm64v8/node:10-buster
     - NODE_VERSION=arm64v8/node:12-buster
 install: skip
-before_script: docker run --rm --privileged multiarch/qemu-user-static:register
+#before_script: docker run --rm --privileged multiarch/qemu-user-static:register
 script: ./docker_build.sh $NODE_VERSION
