@@ -1,7 +1,7 @@
 #! /bin/bash
 echo "Docker build assitant for travis..."
 
-set -e
+set -ex
 DOCKER_NODE="arm32v7/node:10-buster"
 [ -n "$1" ] && DOCKER_NODE="$1"
 
