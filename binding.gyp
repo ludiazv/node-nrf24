@@ -8,14 +8,17 @@
                    'rf24_init.cc'
                  ],
       "cflags": [
-        "-std=c++11","-fexceptions","-Ofast"
+        "-std=c++11","-fexceptions","-Ofast", "-Wno-cast-function-type"
       ],
       'cflags_cc': [ '-fexceptions',"-std=c++11","-Ofast" ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "<!(node -e \"require('nan-check')\")",
         "nan-lib",
-        "rf24libs/include"
+        "rf24libs/include",
+        "rf24libs/include/RF24",
+        "rf24libs/include/RF24Network",
+        "rf24libs/include/RF24Mesh"
       ],
       'defines': [
 

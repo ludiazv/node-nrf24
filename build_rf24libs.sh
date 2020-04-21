@@ -7,6 +7,7 @@ RF24N_VERSION="v1.0.9"
 RF24M_VERSION="v1.0.7"
 RF24G_VERSION="TODO"
 
+set -e
 echo "Buiding nrf24 library versions: RF24:$RF24_VERSION RF24NETWORK:$RF24N_VERSION RF24MESH:$RF24M_VERSION"
 
 #Libraries are allways rebuild as they require FAILURE_HANDLING enabled to operate
@@ -46,10 +47,12 @@ fi
 #  esac
 #fi
 
-echo "Building RF24 libs..."
 mkdir -p rf24libs
 cd rf24libs
 mkdir -p include
+mkdir -p include/RF24
+mkdir -p include/RF24Network
+mkdir -p include/RF24Mesh
 if [ -d RF24 ] ; then
 #cd RF24 ; git pull ; cd ..
 rm -rf RF24
@@ -65,7 +68,7 @@ git show --oneline -s
 echo "===> Activate failure handling ....."
 sed -i '/#define FAILURE_HANDLING/s/^\s.\/\///g' RF24_config.h && cat RF24_config.h | grep FAILURE
 echo "===> Building..."
-./configure --driver=SPIDEV --header-dir="../include" 
+./configure --driver=SPIDEV --header-dir="../include/RF24" 
 make
 #sudo make install
 printf "\nlibrf24.a: \$(OBJECTS)\n\tar -rcs ../librf24.a $^ \n\n" >> Makefile
@@ -85,9 +88,9 @@ git clone $RF24GIT/RF24Network.git RF24Network
 cd RF24Network
 git checkout ${RF24N_VERSION}
 git show --oneline -s
-make
+CPATH="../include" make RF24Network.o
 #sudo make install
-printf "\nlibrf24net.a: RF24Network.o\n\tar -rcs ../librf24net.a $^ \n\t install -m 0644 *.h ../include\n\n" >> Makefile
+printf "\nlibrf24net.a: RF24Network.o\n\tar -rcs ../librf24net.a $^ \n\t install -m 0644 *.h ../include/RF24Network\n\n" >> Makefile
 make librf24net.a
 cd ..
 rm -rf RF24Network
@@ -101,8 +104,8 @@ git clone $RF24GIT/RF24Mesh.git RF24Mesh
 cd RF24Mesh
 git checkout ${RF24M_VERSION}
 git show --oneline -s
-make
-printf "\nlibrf24mesh.a: RF24Mesh.o\n\tar -rcs ../librf24mesh.a $^ \n\t install -m 0644 *.h ../include\n\n" >> Makefile
+CPATH="../include" make RF24Mesh.o
+printf "\nlibrf24mesh.a: RF24Mesh.o\n\tar -rcs ../librf24mesh.a $^ \n\t install -m 0644 *.h ../include/RF24Mesh\n\n" >> Makefile
 make librf24mesh.a
 #sudo make install
 cd ..
