@@ -2,6 +2,7 @@
 # nrf24 - RF24 Radios in the node way
 
 [![GitHub issues](https://img.shields.io/github/issues/ludiazv/node-nrf24.svg)](https://github.com/ludiazv/node-nrf24/issues)
+[![Build Status](https://travis-ci.org/ludiazv/node-nrf24.svg?branch=master)](https://travis-ci.org/ludiazv/node-nrf24)
 
 This module enable __nodejs__ (using javascript syntactic sugar) to manage __nRF24L01(+)__ radios on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
