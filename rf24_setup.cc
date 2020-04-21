@@ -42,7 +42,7 @@ uint32_t  nRF24::_sequencer=0;
 NAN_METHOD(nRF24::begin) {
   auto THIS=MTHIS(nRF24);
   bool p_d=false;
-  if(info.Length()==1) p_d=info[0]->BooleanValue();
+  if(info.Length()==1 && info[0]->IsBoolean()) p_d=Nan::To<bool>(info[0]).FromJust();
   bool r=THIS->_begin(p_d); // init the radio
 
   if(r) THIS->_config(p_d);  // Configure with default configuration.
@@ -185,7 +185,7 @@ NAN_METHOD(nRF24::config) {
       if(cc->PollBaseTime < RF24_MIN_POLLTIME) cc->PollBaseTime=DEFAULT_RF24_CONF.PollBaseTime;
 
 
-      if(info.Length() >= 2 && info[1]->IsBoolean()) print_details=info[1]->BooleanValue();
+      if(info.Length() >= 2 && info[1]->IsBoolean()) print_details=Nan::To<bool>(info[1]).FromJust();
       THIS->_config(print_details); // do Config
 
     } else Nan::ThrowSyntaxError(error.c_str());
@@ -273,7 +273,7 @@ NAN_METHOD(nRF24::useWritePipe) {
           auto_ack=cc->AutoAck;
           memset(addrc,0,6); // Clear addr.
           if(!ConvertHexAddress(addr,addrc,cc->AddressWidth)) return Nan::ThrowSyntaxError("Invalid address");
-          if(info.Length()>=2 && info[1]->IsBoolean()) auto_ack=info[1]->BooleanValue();
+          if(info.Length()>=2 && info[1]->IsBoolean()) auto_ack=Nan::To<bool>(info[1]).FromJust();
           MRET(THIS->_useWritePipe(addrc,auto_ack));
 
       } else return Nan::ThrowSyntaxError(error.c_str());
@@ -350,7 +350,7 @@ NAN_METHOD(nRF24::addReadPipe) {
         RF24_conf_t *cc=THIS->_get_config();
         auto_ack=cc->AutoAck;
         if(!ConvertHexAddress(addr,addrc,cc->AddressWidth)) return Nan::ThrowSyntaxError("Invalid address");
-        if(info.Length()>=2 && info[1]->IsBoolean()) auto_ack=info[1]->BooleanValue();
+        if(info.Length()>=2 && info[1]->IsBoolean()) auto_ack=Nan::To<bool>(info[1]).FromJust();
         MRET(THIS->_addReadPipe(addrc,auto_ack));
 
     } else return Nan::ThrowSyntaxError(error.c_str());

@@ -6,7 +6,7 @@ NAN_METHOD(nRF24::getStats) {
   std::lock_guard<std::mutex> guard(THIS->radio_mutex);
 
   if(info.Length()>=1 && info[0]->IsUint32()){
-      auto pipe=info[0]->Uint32Value();
+      auto pipe=info[0]->Uint32Value(Nan::GetCurrentContext()).FromJust();
       if(pipe==0){
         auto o=Nan::New<v8::Object>();
         Nan::Set(o,Nan::New("TotalTx_Ok").ToLocalChecked(),Nan::New(THIS->stats_[0].snd));
@@ -41,7 +41,7 @@ NAN_METHOD(nRF24::resetStats) {
   auto THIS=MTHIS(nRF24);
   std::lock_guard<std::mutex> guard(THIS->radio_mutex);
   if(info.Length()>=1 && info[0]->IsUint32()) {
-    auto pipe=info[0]->Uint32Value();
+    auto pipe=info[0]->Uint32Value(Nan::GetCurrentContext()).FromJust();
     if(/*pipe>=0 && */pipe<=5) memset(&THIS->stats_[pipe],0,sizeof(RF24_stats_t));
     else THIS->failure_stat_=0;
   } else {
