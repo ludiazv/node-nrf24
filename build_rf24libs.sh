@@ -6,9 +6,12 @@ RF24_VERSION="v1.3.2"
 RF24N_VERSION="v1.0.9"
 RF24M_VERSION="v1.0.7"
 RF24G_VERSION="TODO"
+RF24_DRIVER=SPIDEV
+
+[ -n "$DRIVER" ] && RF24_DRIVER=$DRIVER
 
 set -e
-echo "Buiding nrf24 library versions: RF24:$RF24_VERSION RF24NETWORK:$RF24N_VERSION RF24MESH:$RF24M_VERSION"
+echo "Buiding nrf24 library versions: RF24:$RF24_VERSION RF24NETWORK:$RF24N_VERSION RF24MESH:$RF24M_VERSION DRIVER:$RF24_DRIVER"
 
 #Libraries are allways rebuild as they require FAILURE_HANDLING enabled to operate
 if ! [ -x "$(command -v git)" ]; then
@@ -68,7 +71,7 @@ git show --oneline -s
 echo "===> Activate failure handling ....."
 sed -i '/#define FAILURE_HANDLING/s/^\s.\/\///g' RF24_config.h && cat RF24_config.h | grep FAILURE
 echo "===> Building..."
-./configure --driver=SPIDEV --header-dir="../include/RF24" 
+./configure --driver=$RF24_DRIVER --header-dir="../include/RF24" 
 make
 #sudo make install
 printf "\nlibrf24.a: \$(OBJECTS)\n\tar -rcs ../librf24.a $^ \n\n" >> Makefile
