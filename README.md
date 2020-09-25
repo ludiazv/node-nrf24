@@ -3,6 +3,10 @@
 
 [![GitHub issues](https://img.shields.io/github/issues/ludiazv/node-nrf24.svg)](https://github.com/ludiazv/node-nrf24/issues)
 [![Build Status](https://travis-ci.org/ludiazv/node-nrf24.svg?branch=master)](https://travis-ci.org/ludiazv/node-nrf24)
+![npm](https://img.shields.io/npm/v/nrf24)
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/ludiazv/node-nrf24)
+
+
 
 This module enable __nodejs__ (using javascript syntactic sugar) to manage __nRF24L01(+)__ radios on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
@@ -225,7 +229,7 @@ TODO documentation
 
 The module offer a simplified and basic functionality of the nRF24 library. Only basic operations are supported. Features such DynamicPayloads, AckPayloads, ... are not supported.
 
-#### RF24(ce,cs) constructor
+#### RF24(ce,cs,spi_speed=10000000) constructor
 Create RF24 object that match the wiring. ce and cs values will vary depending on your
 hardware and build o RF24 libs. Please refer to R24libs documentation [here](http://tmrh20.github.io/RF24/RPi.html)
 for your specific case.
@@ -236,6 +240,7 @@ for your specific case.
 | ----- | ----------- |
 | ce    | GPIO # for CE pin |
 | cs    | SPI Chip Select pin. For SPIDEV the mapping is (a * 10 + b)  for /dev/spideva.b |
+| spi_speed | Speed of the SPI interface in Hz. Defaults to 10000000 (10Mhz) |
 
 Both parameters are mandatory. Constructor must be called with __new__ keyword to create a new RF24 object, otherwise thiscall will produce an exception.
 
@@ -301,7 +306,8 @@ Configure the radio with some generally used configuration parameters. This func
 
 | Property | description (valid values) | Default Value |
 | -----    | ----------- | ------------- |
-| PALevel  | Transmission power (MIN, LOW, HIGH, MAX,ULTRA) | MIN |
+| PALevel  | Transmission power (MIN, LOW, HIGH, MAX) | MIN |
+| EnableLna| Enable LNA amplifier if the radio module has it | true |
 | DataRate | Speed of transmission bps (2MBPS,1MBPS,250KB)            | 1MBPS |
 | Channel  | Radio Channel (1-127)  | 76 |
 | CRCLength| Length of CRC checksum for data integrity checking (8bit,16bit, disabled)  | CRC 16 bit  |
@@ -326,7 +332,17 @@ node-rf24 exports some constants to help to define:
 
 __note__: 250KBPS seed is only available in nRF24L01+ variant. If your radio is a nRF24L01 this speed option will not work.
 
-__note__: PA_ULTRA can be used only in nRF24L01 clones that uses a compatible chip Si24R01.
+__note__: PA_ULTRA is the same as RF24_PA_MAX starting form version 0.1.6 for comaptibility reasons with previous versions.
+
+The power levels correspond to the following output levels respectively:
+
+NRF24L01: -18dBm (MIN), -12dBm(LOW),-6dBM(HIGH), and 0dBm(MAX), EnableLna affects modules with LNA
+
+SI24R1:
+- 6dBm (MIN), 0dBm (LOW), 3dBm(HIGH)  and 7dBm(MAX) with EnableLna = true
+- 12dBm (MIN),-4dBm (LOW), 1dBm(HIGH) and 4dBm(MAX) with EnableLna = false
+
+
 
 The second parameter ``print_details`` is optional boolean to show in stdout the configuration of the radio after config is executed. This is useful for debugging.
 
@@ -695,7 +711,7 @@ Get a boolenan indicator if failure has been detected in the radio. (**This is e
 *throws*: Nothing
 
 ### restart()
-Reinit the radio maintaining the configuration and open pipes. Calling this funcion after detecting a failure can reset the de radio
+Reinit the radio maintaining the configuration and open pipes. Calling this funcion after detecting a failure may reset the de radio
 and enable graceful recovery of comunications. (**This is experimental feature**)
 
 *returns*: nothing
@@ -766,13 +782,21 @@ TODO
 - ~~Implement IRQ management.~~
 - ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
 - ~~Implement traffic stats~~
-- Update base RF24 library to new verions (1.3.3 & 1.3.4 do not work)
+- ~~Update base RF24 library to new verions (1.3.3 & 1.3.4 do not work)
 
 # Change log
 
+- v0.1.6-beta
+  - Bump of base libraries to version 1.3.9 (RF24), 1.0.13 (RF24N) , 1.1.3(RF24M) #20
+  - Speed of SPI interface is now configurable in the constructor. #15
+  - Now the module is tested to compile against node versions 10, 12, 14 on arm32 and arm64 environments.
+  - Fix compilation on node version 8 
+  - Added EnableLna for better support radio boards with amplifiers and Si24R1 clones.
+  - Some doc improvements
+
 - v0.1.5-beta
   - Now RFLibs are linked statically avoiding to install library system-wide.
-  - Improved documentation + added experimatal support for autoRecovery.
+  - Improved documentation + added experimental support for autoRecovery.
   - Now the library is compatible and tested with node lts versions: 8 , 10 , 12
   - Added travis automatic build to test compilation in all supported node versions.
   - Fixes in v8 data conversion using isolates and Nan helpers.
