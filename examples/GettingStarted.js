@@ -5,8 +5,8 @@ const readline = require('readline');
 
 const CE=24,CS=0;
 //const CE=25,CS1=1;
-//const IRQ=-1;
-const IRQ=27;
+const IRQ=-1;
+//const IRQ=27;
 console.log("Cofiguration pins CE->",CE," CS->",CS," IRQ->",IRQ);
 var radio=new rf.nRF24(CE,CS);
 
@@ -18,7 +18,8 @@ if(!ready) {
   process.exit(1);
 }
 
-var config={PALevel:rf.RF24_PA_LOW,
+var config={PALevel:rf.RF24_PA_MIN,
+            EnableLna: false,
             DataRate:rf.RF24_1MBPS,
             Channel:76,
             AutoAck:true,
@@ -37,7 +38,8 @@ function rcv(){
   radio.useWritePipe(Pipes[1]);
   radio.read(function(d,items) {
     for(var i=0;i<items;i++){
-      console.log("Payload Rcv, replied:" + radio.write(d[i].data));
+      let r=d[i].data.readUInt32LE(0);
+      console.log("Payload Rcv [" + r +"], reply result:" + radio.write(d[i].data));
     }
   },function() { console.log("STOP!"); });
 
