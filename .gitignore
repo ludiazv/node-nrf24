@@ -12,4 +12,5 @@ rf24_bup.cc
 test/irq
 npm-debug.log
 bup
+.vim-arsync
 
