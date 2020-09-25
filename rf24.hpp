@@ -12,6 +12,7 @@
 // Config structures
 typedef struct RF24_conf {
   uint8_t PALevel;
+  uint8_t EnableLna;
   uint8_t DataRate;
   uint8_t Channel;
   uint8_t CRCLength;
@@ -206,7 +207,7 @@ class nRF24 : public Nan::ObjectWrap {
 
 
  private:
-  explicit nRF24(int ce,int cs);
+  explicit nRF24(int ce,int cs,int spi_speed=RF24_SPI_SPEED);
   // Destructor freeResources
   ~nRF24();
   // Instance Creation
@@ -258,7 +259,7 @@ class nRF24 : public Nan::ObjectWrap {
   };
 
   // Class attributtes
-  int ce_,cs_;   // CE, CS
+  int ce_,cs_,spi_speed_;   // CE, CS
   RF24Irq *irq_;          ///<Irq object
   std::mutex radio_mutex,radio_write_mutex,write_abort_mutex,write_queue_mutex; // Coordination mutex
   RF24 *radio_;   // RADIO

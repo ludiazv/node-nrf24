@@ -3,7 +3,7 @@
 
 
 std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
-   return out << " PALevel:" << (int)h.PALevel << " DataRate:" << (int)h.DataRate
+   return out << " PALevel:" << (int)h.PALevel << " EnableLna:" << (int)h.EnableLna << " DataRate:" << (int)h.DataRate
               << " Channel:" << (int)h.Channel << " CRCLength:" << (int)h.CRCLength
               << " Retries:("<< (int)h.retriesDelay << "+1*250us," << (int)h.retriesCount << " attempts)"
               << " PayloadSize:" << (int)h.PayloadSize << " AddressWidth:" << (int)h.AddressWidth
@@ -19,7 +19,8 @@ std::ostream& operator<<(std::ostream& out, RF24_conf_t &h) {
 
 
 static RF24_conf_t DEFAULT_RF24_CONF={ RF24_PA_MIN ,  //PALevel
-                                       RF24_1MBPS ,   // DataRate;
+                                       1,             // EnableLna
+                                       RF24_1MBPS ,   // DataRate
                                        76 ,           // Channel;
                                        RF24_CRC_16 ,  // CRCLength;
                                        5,             // retriesDelay
@@ -51,7 +52,7 @@ NAN_METHOD(nRF24::begin) {
 
 bool  nRF24::_begin(bool print_details) {
     bool res=false;
-    if(radio_==NULL) radio_=new RF24(ce_,cs_);
+    if(radio_==NULL) radio_=new RF24(ce_,cs_,spi_speed_);
 
     if(radio_) {
       try{
@@ -98,16 +99,25 @@ NAN_METHOD(nRF24::destroy_object) {
 NAN_METHOD(nRF24::New) {
     if (info.IsConstructCall()) {
       int32_t ce,cs;
+      int32_t spi_speed;
       std::string error;
+      nRF24 *obj=NULL;
       if(Nan::Check(info).ArgumentsCount(2)
          .Argument(0).Bind(ce)
          .Argument(1).Bind(cs).Error(&error)) {
-          nRF24 *obj = new nRF24(ce,cs);
-          if(obj==NULL) return Nan::ThrowError("FATAL could not allocate nrf24 object.");
-          obj->Wrap(info.This());
-          obj->Ref(); // Avoid GC to purge the object prematurely
-          info.GetReturnValue().Set(info.This());
-      } else return Nan::ThrowTypeError("nRF24 constructor ERROR:Wrong argument number!");
+          obj = new nRF24(ce,cs);   
+      } else if (Nan::Check(info).ArgumentsCount(3)
+                .Argument(0).Bind(ce)
+                .Argument(1).Bind(ce)
+                .Argument(2).Bind(spi_speed).Error(&error)) {
+                 obj = new nRF24(ce,cs,spi_speed);  
+       } else return Nan::ThrowTypeError("nRF24 constructor ERROR:Wrong argument number!");
+
+       // Wrap the radio object
+       if(obj==NULL) return Nan::ThrowError("FATAL could not allocate nrf24 object.");
+       obj->Wrap(info.This());
+       obj->Ref(); // Avoid GC to purge the object prematurely
+       info.GetReturnValue().Set(info.This());
     } else {
       return Nan::ThrowTypeError("nRF24 constructor ERROR: called constructor without new keyword!");
       /*const int argc = 1;
@@ -118,8 +128,8 @@ NAN_METHOD(nRF24::New) {
     }
 }
 
-nRF24::nRF24(int ce,int cs) :
-   ce_(ce), cs_(cs),irq_(NULL),
+nRF24::nRF24(int ce,int cs,int spi_speed) :
+   ce_(ce), cs_(cs),spi_speed_(spi_speed),irq_(NULL),
   radio_(NULL), worker_(NULL),
   current_config(NULL),
   is_powered_up_(true),is_listening_(false), is_enabled_(true), failure_stat_(0) {
@@ -159,7 +169,8 @@ NAN_METHOD(nRF24::config) {
     {
       RF24_conf_t *cc=THIS->_get_config(); // Init or retrive config
 
-      if(ObjHas(_obj,"PALevel"))  cc->PALevel=(uint8_t)ObjGetUInt(_obj,"PALevel");
+      if(ObjHas(_obj,"PALevel"))   cc->PALevel=(uint8_t)ObjGetUInt(_obj,"PALevel");
+      if(ObjHas(_obj,"EnableLna")) cc->EnableLna=(uint8_t)ObjGetBool(_obj,"EnableLna");
       if(ObjHas(_obj,"Channel"))  cc->Channel=(uint8_t)ObjGetUInt(_obj,"Channel");
       if(ObjHas(_obj,"DataRate")) cc->DataRate=(uint8_t)ObjGetUInt(_obj,"DataRate");
       if(ObjHas(_obj,"PayloadSize")) cc->PayloadSize=(uint8_t)ObjGetUInt(_obj,"PayloadSize");
@@ -174,7 +185,7 @@ NAN_METHOD(nRF24::config) {
       if(ObjHas(_obj,"AutoFailureRecovery")) cc->AutoFailureRecovery=(uint8_t)ObjGetBool(_obj,"AutoFailureRecovery");
       // Validate Fieds and set to default if invalid
 
-      if(cc->PALevel>4)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
+      if(cc->PALevel>3)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
       if(cc->Channel<1 || cc->Channel>127) cc->Channel=DEFAULT_RF24_CONF.Channel;
       if(cc->DataRate>2) cc->DataRate=DEFAULT_RF24_CONF.DataRate;
       if(cc->PayloadSize <1 || cc->PayloadSize >32) cc->PayloadSize=DEFAULT_RF24_CONF.PayloadSize;
@@ -206,7 +217,7 @@ void nRF24::_config(bool print_details) {
   // Perform changes of current config
   //try_and_catch_abort([&]() -> void {
     radio_->setAutoAck(cc->AutoAck);
-    radio_->setPALevel(cc->PALevel);
+    radio_->setPALevel(cc->PALevel,cc->EnableLna);
     radio_->setDataRate((rf24_datarate_e)cc->DataRate);
     radio_->setChannel(cc->Channel);
     radio_->setPayloadSize(cc->PayloadSize);
