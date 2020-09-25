@@ -27,7 +27,8 @@ bool ObjGetBool(v8::Local<v8::Object> & obj,const std::string & name) {
 
 bool ConvertHexAddress(v8::Local<v8::String> val,uint8_t *converted,uint8_t size) {
   bool res=false;
-  v8::String::Utf8Value value(v8::Isolate::GetCurrent(),val);
+  //v8::String::Utf8Value value(v8::Isolate::GetCurrent(),val); 
+  Nan::Utf8String value(val);
   int l=value.length(),i;
   char tmp[3];
   tmp[2]='\0';
