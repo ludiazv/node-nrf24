@@ -2,9 +2,9 @@
 RF24GIT=https://github.com/tmrh20
 ALTGIT=https://github.com/ludiazv
 
-RF24_VERSION="v1.3.2"
-RF24N_VERSION="v1.0.9"
-RF24M_VERSION="v1.0.7"
+RF24_VERSION="v1.3.9"
+RF24N_VERSION="v1.0.13"
+RF24M_VERSION="v1.1.3"  
 RF24G_VERSION="TODO"
 RF24_DRIVER=SPIDEV
 
@@ -68,8 +68,9 @@ echo "=>RF24..."
 cd RF24
 git checkout ${RF24_VERSION}
 git show --oneline -s
-echo "===> Activate failure handling ....."
-sed -i '/#define FAILURE_HANDLING/s/^\s.\/\///g' RF24_config.h && cat RF24_config.h | grep FAILURE
+#echo "===> Activate failure handling ....."
+#sed -i '/#define FAILURE_HANDLING/s/^\s.\/\///g' RF24_config.h && cat RF24_config.h | grep FAILURE
+# New versions of nrf24 activate FAILURE_HANDLING by default
 echo "===> Building..."
 ./configure --driver=$RF24_DRIVER --header-dir="../include/RF24" 
 make
