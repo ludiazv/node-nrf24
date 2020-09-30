@@ -22,6 +22,15 @@ computers [this Hat/pHat](https://www.tindie.com/products/11790/) enable a simpl
 ![image](https://github.com/ludiazv/borosRF2/blob/master/media/all.jpg?raw=true)
 
 
+
+
+If you **like** this project and want to support **the development and maintenance** please consider a donation.
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/boros" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-white.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+</p>
+
+
 ## Overview
 
 This nodejs add-on has the following features:
@@ -84,23 +93,6 @@ Understand your wiring is critical for hardware initialization as there are not 
 
 For better performance and lower CPU usage is recommended to connect also the __PIN 8 (IRQ line)__ an additional GPIO line. Check-out the ``config`` API addtional information about IRQ management. 
 
-#### RF24* libraries installed
-
-RF24* libs must be installed in the system. Please check out  [this](http://tmrh20.github.io/RF24/Linux.html) for detailed installation procedure.
-
-You can use the installation script in this repository than will compile and install then
-libraries with the standard driver SPIDEV:
-
-```bash
-# cd $HOME
-# ./build_rf24libs.sh
-```
-
-it should work on a typical linux environments. nRF24 c++ support different drivers. SPIDEV driver is recommended as this this the standard portable SPI. But in principle all drivers _should_ work in a similar way. This nodejs package has been tested using Rpi driver and Spidev.
-
-> __caveat__: nrf24 base library can be compiled with different drivers: Rpi, SPIDEV, WiringPi... This nodejs module is tested with SPIDEV and Rpi drivers **only**.
-
-
 ### Install the nrf24 package
 
 Use NPM as with other modules:
@@ -111,6 +103,12 @@ npm install nrf24 --save
 This will add nrf24 to your project and save the dependence in your __package.json__
 
 __disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essential","base-devel" packages installed according to your linux distribution.
+
+By default the packages install will build the node module with **SPIDEV** driver. If other driver is preferred the install command must provide the ``env`` variable ``DRIVER=<driver>`` before the npm install command. For example if the driver to use is ``RPi`` install command is:
+
+```bash
+DRIVER=RPi npm install nrf24 --save
+```
 
 ## Usage
 
@@ -783,6 +781,7 @@ TODO
 - ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
 - ~~Implement traffic stats~~
 - ~~Update base RF24 library to new verions (1.3.3 & 1.3.4 do not work)
+- Distribute arm32 & arm64 prebuilds with prebuidify.
 
 # Change log
 
