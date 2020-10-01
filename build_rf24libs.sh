@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 RF24GIT=https://github.com/tmrh20
 ALTGIT=https://github.com/ludiazv
 
