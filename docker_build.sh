@@ -18,7 +18,7 @@ function run_in_node() {
 }
 
 function compile_in_node() {
-       run_in_node $1 "npm --version && npm install && npm install node-gyp -g && ./build_rf24libs.sh && node-gyp rebuild"
+       run_in_node $1 "node --version && npm --version && npm install node-gyp -g && npm install --ignore-scripts  && ./build_rf24libs.sh clean && node-gyp rebuild"
 }
 
 function prebuild() {
@@ -29,7 +29,7 @@ function prebuild() {
        do
               targets="$targets -t ${tar}"
        done
-       local cmd="npm --version && npm install node-gyp prebuildify -g && npm install && ./build_rf24libs.sh clean && node-gyp clean"
+       local cmd="node --version && npm --version && npm install node-gyp prebuildify -g && npm install --ignore-scripts && ./build_rf24libs.sh clean && node-gyp clean"
        cmd="$cmd && prebuildify $targets ${PREBUILD_FLAGS} ${arch_flags}"
        echo "$arch -> $cmd"
        run_in_node "${arch}/${PREBUILD_IMAGE}" "${cmd}"
