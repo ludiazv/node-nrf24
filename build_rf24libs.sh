@@ -49,6 +49,9 @@ fi
 #    * ) echo "-----";;
 #  esac
 #fi
+if [ "$1" == "clean" ] ; then
+  rm -Rf rf24libs
+fi
 
 mkdir -p rf24libs
 cd rf24libs
