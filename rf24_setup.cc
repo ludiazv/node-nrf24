@@ -108,7 +108,7 @@ NAN_METHOD(nRF24::New) {
           obj = new nRF24(ce,cs);   
       } else if (Nan::Check(info).ArgumentsCount(3)
                 .Argument(0).Bind(ce)
-                .Argument(1).Bind(ce)
+                .Argument(1).Bind(cs)
                 .Argument(2).Bind(spi_speed).Error(&error)) {
                  obj = new nRF24(ce,cs,spi_speed);  
        } else return Nan::ThrowTypeError("nRF24 constructor ERROR:Wrong argument number!");
