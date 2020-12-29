@@ -57,7 +57,7 @@ if [ "$1" == "prebuild" ] ; then
               do     
                      echo "Prebuilding for arch $arch"
                      prebuild $arch ${PREBUILD_ARCHS_FLAGS[$i]}
-                     i= $(expr $i + 1) 
+                     i=$(expr $i + 1) 
               done
               # Be sure to delete all artificats
               run_in_node "${PREBUILD_ARCHS[0]}/${PREBUILD_IMAGE}" "rm -Rf build && rm -Rf rf24libs"

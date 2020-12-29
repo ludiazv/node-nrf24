@@ -12,10 +12,10 @@ jobs:
         id: QEMU
         uses: docker/setup-qemu-action@v1
       # Compilation phase
-      - run: ./docker_build.sh build "arm32v7/node:10-buster"
-      - run: ./docker_build.sh build "arm32v7/node:12-buster"
-      - run: ./docker_build.sh build "arm32v7/node:14-buster"
-      - run: ./docker_build.sh build "arm64v8/node:12-buster"
+      #- run: ./docker_build.sh build "arm32v7/node:10-buster"
+      #- run: ./docker_build.sh build "arm32v7/node:12-buster"
+      #- run: ./docker_build.sh build "arm32v7/node:14-buster"
+      #- run: ./docker_build.sh build "arm64v8/node:12-buster"
       # Prebuild phase
       - run: ./docker_build.sh prebuild
       - run: ls -lhR
