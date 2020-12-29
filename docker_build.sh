@@ -5,7 +5,7 @@ echo "Docker based cross-compilation script for nrf24 nodejs module"
 PREBUILD_IMAGE="node:current-buster"
 
 # node versions as targets to prebuild
-PREBUILD_VERSIONS=( "8.0.0" "9.0.0" "10.0.0" "11.0.0" "12.0.0" )
+PREBUILD_VERSIONS=( "8.17.0" "9.11.2" "10.23.0" "11.15.0" "12.20.0" "13.14.0" "14.15.3")
 
 # prebuild architectures & configuration
 PREBUILD_ARCHS=( "arm32v7" "arm64v8" )
@@ -59,10 +59,14 @@ if [ "$1" == "prebuild" ] ; then
                      prebuild $arch ${PREBUILD_ARCHS_FLAGS[$i]}
                      ((i++)) 
               done
+              # Be sure to delete all artificats
+              run_in_node "${PREBUILD_ARCHS[0]}/${PREBUILD_IMAGE}" "rm -Rf build && rm -Rf rf24libs"
        else 
               echo "Prebuild $2..."
-              prebuild ${PREBUILD_ARCHS[${2}]} ${PREBUILD_ARCHS_FLAGS[$2]}
+              prebuild ${PREBUILD_ARCHS[${2}]} ${PREBUILD_ARCHS_FLAGS[${2}]}
+              run_in_node "${PREBUILD_ARCHS[${2}]}/${PREBUILD_IMAGE}" "rm -Rf build && rm -Rf rf24libs"
        fi
+       
        exit 0
 fi
 

@@ -20,5 +20,4 @@ script:
     - ./docker_build.sh build "arm64v8/node:10-buster"
     # Prebuild all
     - ./docker_build.sh prebuild
-    - rm -Rf build && rm -Rf rf24libs
-    - ls -lah
+    - ls -lhR
