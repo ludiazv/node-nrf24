@@ -11,5 +11,7 @@ jobs:
       - name: Install QEMU for cross compilation
         id: QEMU
         uses: docker/setup-qemu-action@v1
+      - run: ./docker_build.sh build "arm32v7/node:10-buster"
+      
 
 
