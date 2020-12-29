@@ -15,5 +15,5 @@ test/irq
 npm-debug.log
 bup
 .vim-arsync
-rf24libss
+rf24libs
     
