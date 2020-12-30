@@ -32,11 +32,11 @@ jobs:
           npm pack
           echo "##[set-output name=version;]$(npm run package-version --silent)"
         id: pack
-    - name: save tarball
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
-        path: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
+      - name: save tarball
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
+          path: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
   
 # NPM publish job
   publish:
