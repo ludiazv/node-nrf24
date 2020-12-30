@@ -16,4 +16,6 @@ npm-debug.log
 bup
 .vim-arsync
 rf24libs
-    
+lgin.sh
+docker_build.sh
+ssh_keys.sh
