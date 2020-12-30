@@ -9,14 +9,15 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v2
 
-      - name: Set up node for publishing
+      - name: Set up node for packing
         uses: actions/setup-node@v2
         with:
-          node-version: '12'
+          node-version: '14'
 
       - name: Install QEMU for cross compilation
         id: QEMU
         uses: docker/setup-qemu-action@v1
+
       # Compilation phase
       #- run: ./docker_build.sh build "arm32v7/node:10-buster"
       #- run: ./docker_build.sh build "arm32v7/node:12-buster"
@@ -25,9 +26,43 @@ jobs:
       # Prebuild phase
       - run: ./docker_build.sh prebuild
       # Create the package
-      - run: npm pack 
-
-
+      - run: npm pack
+      - name: build package
+        run: |
+          npm pack
+          echo "##[set-output name=version;]$(npm run package-version --silent)"
+        id: pack
+    - name: save tarball
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
+        path: ${{ format('nrf24-{0}.tgz', steps.pack.outputs.version) }}
+  
+# NPM publish job
+  publish:
+    #if: todo tag
+    runs-on: ubuntu-latest
+    needs: build      
+      steps:
+        - name: Set up node for publishing
+          uses: actions/setup-node@v2
+          with:
+            node-version: '14'
+        - name: Get Version
+          run: echo "##[set-output name=version;]$(npm run package-version --silent)"
+          id: version
+        - name: Get tarball
+          uses: actions/download-artifact@v2
+          with:
+            name: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
+            path: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
+        - name: publish npm
+          run: |
+              npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+              npm publish ${TARBALL} --access public --dry-run
+          env:
+            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+            TARBALL: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }} 
 
 
 
