@@ -42,27 +42,27 @@ jobs:
   publish:
     #if: todo tag
     runs-on: ubuntu-latest
-    needs: build      
-      steps:
-        - name: Set up node for publishing
-          uses: actions/setup-node@v2
-          with:
-            node-version: '14'
-        - name: Get Version
-          run: echo "##[set-output name=version;]$(npm run package-version --silent)"
-          id: version
-        - name: Get tarball
-          uses: actions/download-artifact@v2
-          with:
-            name: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
-            path: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
-        - name: publish npm
-          run: |
-              npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-              npm publish ${TARBALL} --access public --dry-run
-          env:
-            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-            TARBALL: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }} 
+    needs: build
+    steps:
+      - name: Set up node for publishing
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Get Version
+        run: echo "##[set-output name=version;]$(npm run package-version --silent)"
+        id: version
+      - name: Get tarball
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
+          path: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }}
+      - name: publish npm
+        run: |
+            npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
+            npm publish ${TARBALL} --access public --dry-run
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TARBALL: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }} 
 
 
 
