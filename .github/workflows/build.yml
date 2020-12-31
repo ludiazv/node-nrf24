@@ -73,8 +73,7 @@ jobs:
       - name: publish npm
         run: |
             npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-            #npm publish ${TARBALL} --access public --dry-run
-            ls -lR
+            npm publish ${TARBALL} --access public --dry-run
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TARBALL: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }} 
