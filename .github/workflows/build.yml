@@ -3,8 +3,22 @@ name: build
 on: [push]
 
 jobs:
+  test_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v2
+      # check compilation aginst different node versions in arm platforms
+      - run: ./docker_build.sh build "arm32v7/node:10-buster"
+      #- run: ./docker_build.sh build "arm32v7/node:12-buster"
+      #- run: ./docker_build.sh build "arm32v7/node:14-buster"
+      #- run: ./docker_build.sh build "arm64v8/node:10-buster"
+      #- run: ./docker_build.sh build "arm64v8/node:12-buster"
+      #- run: ./docker_build.sh build "arm64v8/node:14-buster"
+
   build:
     runs-on: ubuntu-latest
+    needs: test_build
     steps:
       - name: checkout repo
         uses: actions/checkout@v2
@@ -18,13 +32,8 @@ jobs:
         id: QEMU
         uses: docker/setup-qemu-action@v1
 
-      # Compilation phase
-      #- run: ./docker_build.sh build "arm32v7/node:10-buster"
-      #- run: ./docker_build.sh build "arm32v7/node:12-buster"
-      #- run: ./docker_build.sh build "arm32v7/node:14-buster"
-      #- run: ./docker_build.sh build "arm64v8/node:12-buster"
       # Prebuild phase
-      - run: ./docker_build.sh prebuild
+      - run: ./docker_build.sh prebuild 0
       # Create the package
       - run: npm pack
       - name: build package
@@ -61,10 +70,8 @@ jobs:
       - name: publish npm
         run: |
             npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
-            npm publish ${TARBALL} --access public --dry-run
+            #npm publish ${TARBALL} --access public --dry-run
+            ls -lR
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TARBALL: ${{ format('nrf24-{0}.tgz', steps.version.outputs.version) }} 
-
-
-
