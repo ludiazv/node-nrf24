@@ -8,6 +8,9 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v2
+      - name: Install QEMU for cross compilation
+        id: QEMU
+        uses: docker/setup-qemu-action@v1
       # check compilation aginst different node versions in arm platforms
       - run: ./docker_build.sh build "arm32v7/node:10-buster"
       #- run: ./docker_build.sh build "arm32v7/node:12-buster"
