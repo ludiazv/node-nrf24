@@ -12,7 +12,7 @@ jobs:
         id: QEMU
         uses: docker/setup-qemu-action@v1
       # check compilation aginst different node versions in arm platforms
-      -run: echo "NOP"
+      - run: echo "NOP"
       #- run: ./docker_build.sh build "arm32v7/node:10-buster"
       #- run: ./docker_build.sh build "arm32v7/node:12-buster"
       #- run: ./docker_build.sh build "arm32v7/node:14-buster"
