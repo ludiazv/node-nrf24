@@ -186,7 +186,7 @@ NAN_METHOD(nRF24::config) {
       // Validate Fieds and set to default if invalid
 
       if(cc->PALevel>3)   cc->PALevel=DEFAULT_RF24_CONF.PALevel;
-      if(cc->Channel<1 || cc->Channel>127) cc->Channel=DEFAULT_RF24_CONF.Channel;
+      if(cc->Channel>126) cc->Channel=DEFAULT_RF24_CONF.Channel; // valid channels 0-126
       if(cc->DataRate>2) cc->DataRate=DEFAULT_RF24_CONF.DataRate;
       if(cc->PayloadSize <1 || cc->PayloadSize >32) cc->PayloadSize=DEFAULT_RF24_CONF.PayloadSize;
       if(cc->retriesCount>15) cc->retriesCount=DEFAULT_RF24_CONF.retriesCount;
