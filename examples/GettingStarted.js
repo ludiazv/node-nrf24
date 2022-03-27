@@ -23,6 +23,7 @@ var config={PALevel:rf.RF24_PA_MIN,
             DataRate:rf.RF24_1MBPS,
             Channel:76,
             AutoAck:true,
+            PayloadSize:4,
             Irq: IRQ
           };
 
@@ -38,12 +39,14 @@ function rcv(){
   radio.useWritePipe(Pipes[1]);
   radio.read(function(d,items) {
     for(var i=0;i<items;i++){
-      let r=d[i].data.readUInt32LE(0);
-      console.log("Payload Rcv [" + r +"], reply result:" + radio.write(d[i].data));
+      let r=d[i].data.readFloatLE(0);
+      console.log("Payload Rcv [" + r +"]");
     }
   },function() { console.log("STOP!"); });
 
 }
+
+var payload = 0.0
 
 function snd(do_sync) {
 
@@ -55,25 +58,27 @@ function snd(do_sync) {
   var roundtrip;
   var sender=function(){
     var data=Buffer.alloc(4);
-    tmstp=Math.round(+new Date()/1000);
-    data.writeUInt32LE(tmstp);
+    var tmstp=payload;
+    data.writeFloatLE(tmstp);
     process.stdout.write("\nSending....");
     roundtrip=process.hrtime();
     if(do_sync) {
-       if(radio.write(data)) process.stdout.write("[Sync] Sended " + tmstp);
+       if(radio.write(data)) process.stdout.write("[Sync] Sended OK " + tmpstp);
        else process.stdout.write("[Sync] Failed to send " + tmstp +" ");
     } else {
       radio.write(data,function(success){
-        if(success) process.stdout.write("[Async] Sended " + tmstp);
+        if(success) process.stdout.write("[Async] Sended OK:" + tmstp);
         else process.stdout.write("[Async] Failed to send " + tmstp +" ");
       });
     }
+    payload += 0.1
   };
+
   radio.read(function(d,n) {
     if(n==1){
       let t=process.hrtime(roundtrip);
       process.stdout.write(" | response received |")
-      let ret=d[0].data.readUInt32LE(0);
+      let ret=d[0].data.readUFloatLE(0);
       if( ret == tmstp) process.stdout.write(" reponse matchs ");
       else process.stdout.write(" response does not match "+ ret + " != " + tmstp);
       console.log("| roundtrip took", (t[1] /1000).toFixed(0)," us");
