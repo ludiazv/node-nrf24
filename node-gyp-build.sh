@@ -9,8 +9,9 @@ if [ $? -eq 0 ] ; then
     exit 0
 else
     set -e
-    echo "Prebuild binary not found... compilation required"
+    echo "Prebuild binary not found... compilation required."
     ./build_rf24libs.sh clean
+    ./build_rf24libs.sh native
     node-gyp rebuild
 fi
 exit 0

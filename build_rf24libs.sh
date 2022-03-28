@@ -51,6 +51,7 @@ fi
 #fi
 if [ "$1" == "clean" ] ; then
   rm -Rf rf24libs
+  exit 0
 fi
 
 mkdir -p rf24libs
