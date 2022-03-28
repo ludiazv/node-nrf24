@@ -20,3 +20,4 @@ lgin.sh
 docker_build.sh
 ssh_keys.sh
 .travis.yml
+.no-travis.yml
