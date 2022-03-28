@@ -73,9 +73,13 @@ git show --oneline -s
 # New versions of nrf24 activate FAILURE_HANDLING by default
 echo "===> Building..."
 ./configure --driver=$RF24_DRIVER --header-dir="../include/RF24" 
-make
-#sudo make install
+if [ "$1" = "native" ]; then
+  sed -i -r 's/^(CFLAGS=).*/\1 -march=native -Ofast -Wall -pthread/' Makefile.inc
+fi
+# Add a build target for the static lib
 printf "\nlibrf24.a: \$(OBJECTS)\n\tar -rcs ../librf24.a $^ \n\n" >> Makefile
+
+cat Makefile.inc
 make librf24.a
 make install-headers
 cd ..
