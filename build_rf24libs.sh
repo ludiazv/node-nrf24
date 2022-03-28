@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 RF24GIT=https://github.com/tmrh20
 ALTGIT=https://github.com/ludiazv
 
@@ -49,6 +49,9 @@ fi
 #    * ) echo "-----";;
 #  esac
 #fi
+if [ "$1" == "clean" ] ; then
+  rm -Rf rf24libs
+fi
 
 mkdir -p rf24libs
 cd rf24libs

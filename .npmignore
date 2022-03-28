@@ -1,3 +1,5 @@
+test
+.github
 debug_key*
 debug_key*.pub
 .DS_Store
@@ -13,7 +15,8 @@ test/irq
 npm-debug.log
 bup
 .vim-arsync
-prebuilds
 rf24libs
-    
-
+lgin.sh
+docker_build.sh
+ssh_keys.sh
+.travis.yml
