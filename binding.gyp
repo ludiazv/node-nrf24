@@ -8,9 +8,9 @@
                    'rf24_init.cc'
                  ],
       "cflags": [
-        "-std=c++11","-fexceptions","-Ofast", "-Wno-cast-function-type"
+        "-std=c++14","-fexceptions","-Ofast", "-Wno-cast-function-type"
       ],
-      'cflags_cc': [ '-fexceptions',"-std=c++11","-Ofast" ],
+      'cflags_cc': [ '-fexceptions',"-std=c++14","-Ofast" ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "<!(node -e \"require('nan-check')\")",
