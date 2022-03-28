@@ -2,25 +2,29 @@
 echo "Docker based cross-compilation script for nrf24 nodejs module"
 
 # Distribution to use for prebuild
-PREBUILD_IMAGE="node:current-buster"
+PREBUILD_IMAGE="node:current-bullseye"
 
 # node versions as targets to prebuild
-PREBUILD_VERSIONS=( "8.17.0" "9.11.2" "10.23.0" "11.15.0" "12.20.0" "13.14.0" "14.15.3")
+PREBUILD_VERSIONS=( "12.22.11" "14.19.1" "16.14.2") 
 
 # prebuild architectures & configuration
 PREBUILD_ARCHS=( "arm32v7" "arm64v8" )
 PREBUILD_ARCHS_FLAGS=( "--tag-armv 7" "--tag-armv 8")
 PREBUILD_FLAGS="--strip --libc glibc --tag-libc"
 
+# Run in a specific node docker image
 function run_in_node() {
        local node_image="$1"
        docker run -t --rm --entrypoint="/bin/sh" -v$(pwd):/root/app --workdir /root/app $node_image -c "${2}"
 }
 
+# Perform compilation in a specifi node 
 function compile_in_node() {
-       run_in_node $1 "node --version && npm --version && npm install node-gyp -g && npm install --ignore-scripts  && ./build_rf24libs.sh clean && node-gyp rebuild"
+       local prelude="node --version && npm --version && npm install node-gyp -g && npm install --ignore-scripts"
+       run_in_node $1 "$prelude && ./build_rf24libs.sh clean && ./build_rf24libs.sh && node-gyp rebuild"
 }
 
+# Prebuild for specific targets
 function prebuild() {
        local arch=$1
        local arch_flags=$2
@@ -29,7 +33,7 @@ function prebuild() {
        do
               targets="$targets -t ${tar}"
        done
-       local cmd="node --version && npm --version && npm install node-gyp prebuildify -g && npm install --ignore-scripts && ./build_rf24libs.sh clean && node-gyp clean"
+       local cmd="node --version && npm --version && npm install node-gyp prebuildify -g && npm install --ignore-scripts && ./build_rf24libs.sh clean && ./build_rf24libs.sh && node-gyp clean"
        cmd="$cmd && prebuildify $targets ${PREBUILD_FLAGS} ${arch_flags}"
        echo "$arch -> $cmd"
        run_in_node "${arch}/${PREBUILD_IMAGE}" "${cmd}"
