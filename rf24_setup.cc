@@ -217,8 +217,10 @@ void nRF24::_config(bool print_details) {
   // Perform changes of current config
   //try_and_catch_abort([&]() -> void {
     radio_->setAutoAck(cc->AutoAck);
-    radio_->setPALevel(cc->PALevel,cc->EnableLna);
-    radio_->setDataRate((rf24_datarate_e)cc->DataRate);
+    //radio_->setPALevel(cc->PALevel,cc->EnableLna);
+    //radio_->setDataRate((rf24_datarate_e)cc->DataRate);
+    // Use new version optimized code to ser PA Leve and datarate with a single SPI transaction
+    radio->setRadiation(cc->PALevel, (rf24_datarate_e)cc->DataRate, cc->EnableLna);
     radio_->setChannel(cc->Channel);
     radio_->setPayloadSize(cc->PayloadSize);
     radio_->setRetries(cc->retriesDelay,cc->retriesCount);
