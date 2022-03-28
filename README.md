@@ -43,6 +43,8 @@ This nodejs add-on has the following features:
 
 ### Prerequisites:
 
+### Nodejs version
+The module requires node js version >=12. This requeriment can change as nodejs new versions of are released.
 #### SPI enabled & Gpio Access
 In order to communicate with the radio linux kernel need to have SPI enabled and direct access to board GPIOs. In some distributions SPI interface is disabled by default so it's needed to be enabled.
 
