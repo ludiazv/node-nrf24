@@ -9,12 +9,14 @@ language: minimal
 services:
     - docker
 env:
-    - NODE_VERSION=arm32v7/node:12-buster
-    - NODE_VERSION=arm32v7/node:14-buster
-    - NODE_VERSION=arm32v7/node:16-buster
-    - NODE_VERSION=arm64v8/node:12-buster
-    - NODE_VERSION=arm64v8/node:14-buster
-    - NODE_VERSION=arm64v8/node:16-buster
+    - NODE_VERSION=arm32v7/node:12-bullseye
+    - NODE_VERSION=arm32v7/node:14-bullseye
+    - NODE_VERSION=arm32v7/node:16-bullseye
+    - NODE_VERSION=arm32v7/node:17-bullseye
+    - NODE_VERSION=arm64v8/node:12-bullseye
+    - NODE_VERSION=arm64v8/node:14-bullseye
+    - NODE_VERSION=arm64v8/node:16-bullseye
+    - NODE_VERSION=arm64v8/node:17-bullseye
 install: skip
 #before_script: docker run --rm --privileged multiarch/qemu-user-static:register
 script:
