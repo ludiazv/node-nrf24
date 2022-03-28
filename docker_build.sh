@@ -21,7 +21,7 @@ function run_in_node() {
 # Perform compilation in a specifi node 
 function compile_in_node() {
        local prelude="node --version && npm --version && npm install node-gyp -g && npm install --ignore-scripts"
-       run_in_node $1 "$prelude && ./build_rf24libs.sh clean && ./build_rf24libs.sh && node-gyp rebuild"
+       run_in_node $1 "$prelude && ./build_rf24libs.sh clean && node-gyp rebuild"
 }
 
 # Prebuild for specific targets
