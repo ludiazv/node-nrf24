@@ -11,14 +11,15 @@ jobs:
       - name: Install QEMU for cross compilation
         id: QEMU
         uses: docker/setup-qemu-action@v1
+
       # check compilation aginst different node versions in arm platforms
-      - run: echo "NOP"
-      #- run: ./docker_build.sh build "arm32v7/node:10-buster"
-      #- run: ./docker_build.sh build "arm32v7/node:12-buster"
-      #- run: ./docker_build.sh build "arm32v7/node:14-buster"
-      #- run: ./docker_build.sh build "arm64v8/node:10-buster"
-      #- run: ./docker_build.sh build "arm64v8/node:12-buster"
-      #- run: ./docker_build.sh build "arm64v8/node:14-buster"
+      - run: echo "Testing Arm lts builds..."
+      - run: ./docker_build.sh build "arm32v7/node:12-bullseye"
+      - run: ./docker_build.sh build "arm32v7/node:14-bullseye"
+      - run: ./docker_build.sh build "arm32v7/node:16-bullseye"
+      - run: ./docker_build.sh build "arm64v8/node:10-bullseye"
+      - run: ./docker_build.sh build "arm64v8/node:14-bullseye"
+      - run: ./docker_build.sh build "arm64v8/node:14-bullseye"
 
   build:
     runs-on: ubuntu-latest
@@ -30,14 +31,14 @@ jobs:
       - name: Set up node for packing
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: 'lts/*'
 
       - name: Install QEMU for cross compilation
         id: QEMU
         uses: docker/setup-qemu-action@v1
 
       # Prebuild phase
-      - run: ./docker_build.sh prebuild 0
+      - run: ./docker_build.sh prebuild
       # Create the package
       - name: build package
         run: |
@@ -61,7 +62,7 @@ jobs:
       - name: Set up node for publishing
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: 'lts/*'
       - name: Get Version
         run: echo "##[set-output name=version;]$(npm run package-version --silent)"
         id: version
