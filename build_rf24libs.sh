@@ -11,7 +11,7 @@ RF24_DRIVER=SPIDEV
 [ -n "$DRIVER" ] && RF24_DRIVER=$DRIVER
 
 set -e
-echo "Buiding nrf24 library versions: RF24:$RF24_VERSION RF24NETWORK:$RF24N_VERSION RF24MESH:$RF24M_VERSION DRIVER:$RF24_DRIVER"
+echo "[$1] Buiding nrf24 library versions: RF24:$RF24_VERSION RF24NETWORK:$RF24N_VERSION RF24MESH:$RF24M_VERSION DRIVER:$RF24_DRIVER"
 
 #Libraries are allways rebuild as they require FAILURE_HANDLING enabled to operate
 if ! [ -x "$(command -v git)" ]; then
@@ -50,6 +50,7 @@ fi
 #  esac
 #fi
 if [ "$1" = "clean" ] ; then
+  echo "rf24 libs cleaned"
   rm -Rf rf24libs
   exit 0
 fi
