@@ -2,15 +2,16 @@
 # nrf24 - RF24 Radios in the node way
 
 [![GitHub issues](https://img.shields.io/github/issues/ludiazv/node-nrf24.svg)](https://github.com/ludiazv/node-nrf24/issues)
-[![Build Status](https://travis-ci.org/ludiazv/node-nrf24.svg?branch=master)](https://travis-ci.org/ludiazv/node-nrf24)
+![Build](https://github.com/ludiazv/node-nrf24/actions/workflows/build.yml/badge.svg)
 ![npm](https://img.shields.io/npm/v/nrf24)
+![node](https://img.shields.io/node/v/nrf24)
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/ludiazv/node-nrf24)
 
 
 
 This module enable __nodejs__ (using javascript syntactic sugar) to manage __nRF24L01(+)__ radios on linux-based one board computers (RaspberryPi,OrangePi,BeagleBone,Edison,CHIP...). Wide support for SBCs is provided by the *RF24 library* supporting Generic Linux devices with SPIDEV, MRAA, RPi native via BCM* chips, WiringPi or using LittleWire.
 
-This module is based on the outstanding C++ library optimized by @tmrh20. Please consult the project documentation **nRF24** [here](http://tmrh20.github.io/RF24/) for additional details.
+This module is based on the outstanding C++ library optimized by @tmrh20. Please consult the project documentation **nRF24** [here](http://nrf24.github.io/RF24/) for additional details.
 
 This project has a sister project to enable __Node-RED__ to use __nRF24L01(+)__ radios in a seamless way with visual flow programming. Check out the repository [here](https://github.com/ludiazv/node-red-contrib-nrf24).
 
@@ -20,8 +21,6 @@ computers [this Hat/pHat](https://www.tindie.com/products/11790/) enable a simpl
 **BorosRF2 hat:**
 
 ![image](https://github.com/ludiazv/borosRF2/blob/master/media/all.jpg?raw=true)
-
-
 
 
 If you **like** this project and want to support **the development and maintenance** please consider a donation.
@@ -45,6 +44,7 @@ This nodejs add-on has the following features:
 
 ### Nodejs version
 The module requires node js version >=12. This requeriment can change as nodejs new versions of are released.
+
 #### SPI enabled & Gpio Access
 In order to communicate with the radio linux kernel need to have SPI enabled and direct access to board GPIOs. In some distributions SPI interface is disabled by default so it's needed to be enabled.
 
@@ -102,15 +102,20 @@ Use NPM as with other modules:
 cd <your project>
 npm install nrf24 --save
 ```
-This will add nrf24 to your project and save the dependence in your __package.json__
+This will add nrf24 to your project and save the dependence in your __package.json__. 
 
-__disclaimer:__ This package is a C++ native add-on that will require compilation on your linux system. Please assure that you have the proper "build-essential","base-devel" packages installed according to your linux distribution.
+Starting from version ```0.2-beta``` the module is build with prebuild versions for stable lts versions of nodejs for armv7(32bit) and armv8 (64bit) platforms.
+
+__disclaimer:__ This package is a C++ native add-on that may require compilation on your linux system. Please assure that you have the proper "build-essential","base-devel" packages installed according to your linux distribution.
 
 By default the packages install will build the node module with **SPIDEV** driver. If other driver is preferred the install command must provide the ``env`` variable ``DRIVER=<driver>`` before the npm install command. For example if the driver to use is ``RPi`` install command is:
 
 ```bash
 DRIVER=RPi npm install nrf24 --save
 ```
+
+This may not work for some available drivers. The only tested DRIVER is **SPIDEV**.
+
 
 ## Usage
 
@@ -783,9 +788,15 @@ TODO
 - ~~Benchmark IRQ performance.~~ -> Will respond on 300-400us basis. (1-2 retries)
 - ~~Implement traffic stats~~
 - ~~Update base RF24 library to new verions (1.3.3 & 1.3.4 do not work)
-- Distribute arm32 & arm64 prebuilds with prebuidify.
+- ~~Distribute arm32 & arm64 prebuilds with prebuidify~~
 
 # Change log
+
+- V0.2.0-beta
+  - Bump base library versions to RF24_VERSION="v1.4.2", RF24N_VERSION="v1. 0.16" and RF24M_VERSION="v1.1.6" 
+  - optimize configuration function.
+  - Now requires nodejs >=12.
+  - Includes precompiled binaries for Node 12,14,16 in platforms arm32 & arm64.
 
 - v0.1.6-beta
   - Bump of base libraries to version 1.3.9 (RF24), 1.0.13 (RF24N) , 1.1.3(RF24M) #20
