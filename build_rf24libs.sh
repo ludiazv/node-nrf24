@@ -49,7 +49,7 @@ fi
 #    * ) echo "-----";;
 #  esac
 #fi
-if [ "$1" == "clean" ] ; then
+if [ "$1" = "clean" ] ; then
   rm -Rf rf24libs
   exit 0
 fi
