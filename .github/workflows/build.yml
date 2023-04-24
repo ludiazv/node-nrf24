@@ -17,9 +17,11 @@ jobs:
       - run: ./docker_build.sh build "arm32v7/node:12-bullseye"
       - run: ./docker_build.sh build "arm32v7/node:14-bullseye"
       - run: ./docker_build.sh build "arm32v7/node:16-bullseye"
+      - run: ./docker_build.sh build "arm32v7/node:18-bullseye"
       - run: ./docker_build.sh build "arm64v8/node:12-bullseye"
       - run: ./docker_build.sh build "arm64v8/node:14-bullseye"
       - run: ./docker_build.sh build "arm64v8/node:16-bullseye"
+      - run: ./docker_build.sh build "arm64v8/node:18-bullseye"
       - run: ./docker_build.sh build "arm64v8/node:current-bullseye"
 
   build:

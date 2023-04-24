@@ -5,7 +5,9 @@ echo "Docker based cross-compilation script for nrf24 nodejs module"
 PREBUILD_IMAGE="node:current-bullseye"
 
 # node versions as targets to prebuild
-PREBUILD_VERSIONS=( "12.22.11" "14.19.1" "16.14.2" "17.8.0") 
+#PREBUILD_VERSIONS=( "12.22.11" "14.19.1" "16.14.2" "17.8.0") 
+PREBUILD_VERSIONS=( "12.22.12" "14.21.3" "16.20.0" "18.16.0")
+
 
 # prebuild architectures & configuration
 PREBUILD_ARCHS=( "arm32v7" "arm64v8" )
